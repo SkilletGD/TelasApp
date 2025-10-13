@@ -8,9 +8,10 @@ data class Rollo(
     val tipo_tela: String,
     val color: String,
     val codigo: String,
-    val cantidad_total: Double,
-    val cantidad_restante: Double,
-    val estado: String = "Disponible",
+    val cantidad_total: String,
+    val cantidad_restante: String,
     val fecha_compra: String? = null,
-    val proveedor: String? = null
+    val proveedor: String? = null,
+    val registrado_por: String,
+    val estado: String = "Disponible"
 )

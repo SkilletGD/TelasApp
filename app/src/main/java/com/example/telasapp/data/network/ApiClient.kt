@@ -16,5 +16,5 @@ object ApiClient {
         }
     }
 
-    const val BASE_URL = "https://mysql-cfai.onrender.com/" // Cambia a tu URL real
+    const val BASE_URL = "https://mysql-cfai.onrender.com"
 }

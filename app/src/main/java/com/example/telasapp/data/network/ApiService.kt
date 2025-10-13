@@ -10,8 +10,10 @@ object ApiService {
     private val client = ApiClient.client
     private const val BASE_URL = ApiClient.BASE_URL
 
-    suspend fun obtenerRollos(): List<Rollo> =
-        client.get("$BASE_URL/inventory").body()
+    suspend fun obtenerRollos(): List<Rollo> {
+        return client.get("$BASE_URL/rollos").body<List<Rollo>>()
+    }
+
 
     suspend fun crearRollo(rollo: Rollo): Rollo =
         client.post("$BASE_URL/inventory") {
