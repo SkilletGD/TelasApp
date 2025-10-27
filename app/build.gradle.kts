@@ -42,7 +42,6 @@ android {
         compose = true
     }
 
-    // 👇 Este bloque debe ir fuera de compileOptions
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
@@ -65,31 +64,30 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // Jetpack Compose
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.compose.ui:ui:1.7.3")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.7.3")
-    implementation("androidx.compose.material3:material3:1.3.0")
+    // AGREGA ESTAS LÍNEAS:
+    implementation("androidx.compose.material:material-icons-core:1.6.0")
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
 
-    // Herramientas de depuración
-    debugImplementation("androidx.compose.ui:ui-tooling:1.7.3")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.7.3")
+    // Si necesitas LiveData (aunque no parece que lo uses)
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.0")
+
     // Ktor Client
     implementation("io.ktor:ktor-client-core:2.3.5")
     implementation("io.ktor:ktor-client-cio:2.3.5")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.5")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.5")
 
-// Kotlinx Serialization
+    // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
-// Coroutines
+    // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.3")
 
-// ViewModel Compose
+    // ViewModel Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.2")
 }

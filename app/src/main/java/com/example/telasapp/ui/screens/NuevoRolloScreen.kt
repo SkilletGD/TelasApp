@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun NuevoRolloScreen(
     navController: NavController,
-    vm: InventarioViewModel = viewModel()
+    vm: InventarioViewModel
 ) {
     var tipoTela by remember { mutableStateOf("") }
     var color by remember { mutableStateOf("") }

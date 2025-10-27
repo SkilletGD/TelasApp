@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 fun VentaScreen(
     navController: NavController,
     rolloId: Int?,
-    vm: InventarioViewModel = viewModel()
+    vm: InventarioViewModel
 ) {
     var metrosVendidos by remember { mutableStateOf("") }
     var vendedor by remember { mutableStateOf("") }

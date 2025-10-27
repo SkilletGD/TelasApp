@@ -4,6 +4,7 @@ import com.example.telasapp.data.models.Rollo
 import com.example.telasapp.data.models.Venta
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 
 object ApiService {
@@ -26,7 +27,12 @@ object ApiService {
             setBody(rollo)
         }.body()
 
-    // COMPLETAR función de venta
+    // En tu ApiService.kt - AGREGA esta función
+    suspend fun eliminarRollo(rolloId: Int): Boolean {
+        val response: HttpResponse = client.delete("$BASE_URL/rollos/$rolloId")
+        return response.status == HttpStatusCode.OK
+    }
+
     suspend fun registrarVenta(venta: Venta): String {
         val response: String = client.post("$BASE_URL/ventas") {
             contentType(ContentType.Application.Json)

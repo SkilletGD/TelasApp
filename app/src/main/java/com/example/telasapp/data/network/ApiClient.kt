@@ -12,6 +12,8 @@ object ApiClient {
             json(Json {
                 prettyPrint = true
                 ignoreUnknownKeys = true
+                coerceInputValues = true  // ¡AGREGA ESTA LÍNEA!
+                explicitNulls = false     // ¡AGREGA ESTA LÍNEA!
             })
         }
     }

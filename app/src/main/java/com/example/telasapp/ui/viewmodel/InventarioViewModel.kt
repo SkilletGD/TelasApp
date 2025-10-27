@@ -96,4 +96,27 @@ class InventarioViewModel : ViewModel() {
     fun clearError() {
         _errorMessage.value = null
     }
+    // En tu InventarioViewModel.kt - agrega esta función
+    fun eliminarRollo(rolloId: Int) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                val fueEliminado = ApiService.eliminarRollo(rolloId)
+                if (fueEliminado) {
+                    // Remover el rollo de la lista local
+                    _rollos.value = _rollos.value.filter { it.id != rolloId }
+                    // Opcional: mostrar mensaje de éxito
+                } else {
+                    _errorMessage.value = "Error al eliminar el rollo"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al eliminar rollo: ${e.message}"
+                e.printStackTrace()
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
 }

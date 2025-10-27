@@ -18,7 +18,7 @@ import com.example.telasapp.ui.viewmodel.InventarioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InventarioScreen(navController: NavController, vm: InventarioViewModel = viewModel()) {
+fun InventarioScreen(navController: NavController, vm: InventarioViewModel) {
     val rollos by vm.rollos.collectAsState()
     val isLoading by vm.isLoading.collectAsState()
     val errorMessage by vm.errorMessage.collectAsState()
@@ -73,22 +73,39 @@ fun InventarioScreen(navController: NavController, vm: InventarioViewModel = vie
                             .padding(16.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("❌", style = MaterialTheme.typography.bodyLarge)
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("❌", style = MaterialTheme.typography.bodyLarge)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Error de conexión",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color(0xFFD32F2F)
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                                IconButton(
+                                    onClick = { vm.clearError() }
+                                ) {
+                                    Text("✕", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = message,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFFD32F2F)
                             )
-                            Spacer(modifier = Modifier.weight(1f))
-                            IconButton(
-                                onClick = { vm.clearError() }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = {
+                                    vm.clearError()
+                                    vm.cargarRollos()
+                                },
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("✕", style = MaterialTheme.typography.bodyMedium)
+                                Text("Reintentar Conexión")
                             }
                         }
                     }
@@ -137,13 +154,28 @@ fun InventarioScreen(navController: NavController, vm: InventarioViewModel = vie
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            "Presiona + para agregar el primer rollo",
+                            "El servidor puede tardar unos segundos en responder",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(24.dp))
+
+                        // Botón de Actualizar/Reintentar
                         Button(
-                            onClick = { navController.navigate("nuevoRollo") }
+                            onClick = { vm.cargarRollos() }
+                        ) {
+                            Text("Reintentar Conexión")
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Botón de Agregar (opcional)
+                        Button(
+                            onClick = { navController.navigate("nuevoRollo") },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         ) {
                             Text("Agregar Primer Rollo")
                         }
@@ -208,7 +240,7 @@ fun RolloItem(rollo: com.example.telasapp.data.models.Rollo, navController: NavC
             )
             Text(
                 text = "Estado: ${rollo.estado}",
-                color = when(rollo.estado) {
+                color = when (rollo.estado) {
                     "Disponible" -> Color(0xFF2E7D32)
                     "Agotado" -> Color(0xFFD32F2F)
                     "Vendido" -> Color(0xFF1976D2)
