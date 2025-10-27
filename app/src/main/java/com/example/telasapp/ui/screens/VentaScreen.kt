@@ -170,7 +170,7 @@ fun VentaScreen(
                     }
                 }
 
-                // Botón para vender todo rápido
+                /* Botón para vender todo rápido */
                 if (rollo.estado == "Disponible") {
                     Button(
                         onClick = {
