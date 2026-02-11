@@ -18,5 +18,5 @@ object ApiClient {
         }
     }
 
-    const val BASE_URL = "https://mysql-cfai.onrender.com"
+    const val BASE_URL = "https://bd-telas-app.onrender.com"
 }

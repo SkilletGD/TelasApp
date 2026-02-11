@@ -9,11 +9,12 @@ import com.example.telasapp.ui.screens.NuevoRolloScreen
 import com.example.telasapp.ui.screens.VentaScreen
 import com.example.telasapp.ui.viewmodel.InventarioViewModel
 import com.example.telasapp.ui.screens.DetalleRolloScreen
+import com.example.telasapp.ui.screens.ReporteVentasScreen  // ¡NUEVA IMPORTACIÓN!
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    viewModel: InventarioViewModel  // Recibir el ViewModel desde MainActivity
+    viewModel: InventarioViewModel
 ) {
     NavHost(navController = navController, startDestination = "inventario") {
         composable("inventario") {
@@ -27,7 +28,7 @@ fun AppNavigation(
             VentaScreen(
                 navController = navController,
                 rolloId = rolloId,
-                vm = viewModel  // Pasar la misma instancia
+                vm = viewModel
             )
         }
         composable("detalleRollo/{rolloId}") { backStackEntry ->
@@ -35,8 +36,12 @@ fun AppNavigation(
             DetalleRolloScreen(
                 navController = navController,
                 rolloId = rolloId,
-                vm = viewModel  // Pasar la misma instancia
+                vm = viewModel
             )
+        }
+        // ¡NUEVA RUTA PARA REPORTES DE VENTAS!
+        composable("reporteVentas") {
+            ReporteVentasScreen(navController = navController, vm = viewModel)
         }
     }
 }

@@ -40,4 +40,8 @@ object ApiService {
         }.body()
         return response
     }
+    // En tu ApiService.kt - agrega esta función
+    suspend fun obtenerVentas(): List<Venta> {
+        return client.get("$BASE_URL/ventas").body()
+    }
 }

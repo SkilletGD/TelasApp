@@ -14,6 +14,9 @@ class InventarioViewModel : ViewModel() {
     private val _rollos = MutableStateFlow<List<Rollo>>(emptyList())
     val rollos: StateFlow<List<Rollo>> = _rollos
 
+    private val _ventas = MutableStateFlow<List<Venta>>(emptyList())  // NUEVO
+    val ventas: StateFlow<List<Venta>> = _ventas  // NUEVO
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -28,6 +31,22 @@ class InventarioViewModel : ViewModel() {
                 _rollos.value = ApiService.obtenerRollos()
             } catch (e: Exception) {
                 _errorMessage.value = "Error al cargar rollos: ${e.message}"
+                e.printStackTrace()
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // NUEVA FUNCIÓN: Cargar ventas
+    fun cargarVentas() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                _ventas.value = ApiService.obtenerVentas()
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al cargar ventas: ${e.message}"
                 e.printStackTrace()
             } finally {
                 _isLoading.value = false
@@ -96,7 +115,7 @@ class InventarioViewModel : ViewModel() {
     fun clearError() {
         _errorMessage.value = null
     }
-    // En tu InventarioViewModel.kt - agrega esta función
+
     fun eliminarRollo(rolloId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -106,7 +125,6 @@ class InventarioViewModel : ViewModel() {
                 if (fueEliminado) {
                     // Remover el rollo de la lista local
                     _rollos.value = _rollos.value.filter { it.id != rolloId }
-                    // Opcional: mostrar mensaje de éxito
                 } else {
                     _errorMessage.value = "Error al eliminar el rollo"
                 }
@@ -118,5 +136,4 @@ class InventarioViewModel : ViewModel() {
             }
         }
     }
-
 }
