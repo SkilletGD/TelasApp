@@ -10,6 +10,7 @@ import com.example.telasapp.ui.screens.VentaScreen
 import com.example.telasapp.ui.viewmodel.InventarioViewModel
 import com.example.telasapp.ui.screens.DetalleRolloScreen
 import com.example.telasapp.ui.screens.ReporteVentasScreen  // ¡NUEVA IMPORTACIÓN!
+import com.example.telasapp.ui.screens.ScannerScreen
 
 @Composable
 fun AppNavigation(
@@ -30,6 +31,10 @@ fun AppNavigation(
                 rolloId = rolloId,
                 vm = viewModel
             )
+        }
+        // --- ESTO ES LO QUE TE FALTA ---
+        composable("scanner") {
+            ScannerScreen(navController)
         }
         composable("detalleRollo/{rolloId}") { backStackEntry ->
             val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()

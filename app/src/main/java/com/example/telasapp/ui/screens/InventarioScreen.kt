@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -96,6 +97,18 @@ fun InventarioScreen(navController: NavController, vm: InventarioViewModel) {
                                 strokeWidth = 2.dp
                             )
                         }
+                    }
+                },
+                // --- AQUÍ SE AGREGA EL BOTÓN EN LA IZQUIERDA ---
+                navigationIcon = {
+                    IconButton(
+                        onClick = { navController.navigate("scanner") }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = "Escanear QR",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 actions = {

@@ -93,4 +93,13 @@ dependencies {
 
     //Codigo QR
     implementation("com.google.zxing:core:3.5.1")
+
+    // CameraX
+    val camerax_version = "1.3.0"
+    implementation("androidx.camera:camera-camera2:$camerax_version")
+    implementation("androidx.camera:camera-lifecycle:$camerax_version")
+    implementation("androidx.camera:camera-view:$camerax_version")
+
+    // ML Kit para QR
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
 }
