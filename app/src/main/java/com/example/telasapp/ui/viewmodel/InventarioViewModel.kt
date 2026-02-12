@@ -8,6 +8,9 @@ import com.example.telasapp.data.network.ApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import android.content.Context
+import com.example.telasapp.features.export.LabelGenerator
+import com.example.telasapp.features.export.ExportService
 
 class InventarioViewModel : ViewModel() {
 
@@ -135,5 +138,20 @@ class InventarioViewModel : ViewModel() {
                 _isLoading.value = false
             }
         }
+    }
+
+    // Dentro de la clase InventarioViewModel
+    fun imprimirEtiqueta(context: Context, rollo: Rollo) {
+        val generator = LabelGenerator(context)
+        val service = ExportService(context)
+        val pdfFile = generator.generarPDFEtiqueta(rollo)
+        service.imprimirPDF(pdfFile)
+    }
+
+    fun compartirEtiqueta(context: Context, rollo: Rollo) {
+        val generator = LabelGenerator(context)
+        val service = ExportService(context)
+        val pdfFile = generator.generarPDFEtiqueta(rollo)
+        service.compartirArchivo(pdfFile)
     }
 }

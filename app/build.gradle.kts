@@ -90,4 +90,7 @@ dependencies {
 
     // ViewModel Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.2")
+
+    //Codigo QR
+    implementation("com.google.zxing:core:3.5.1")
 }
