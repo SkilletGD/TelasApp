@@ -1,6 +1,8 @@
 package com.example.telasapp.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -18,7 +20,8 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun NuevoRolloScreen(
     navController: NavController,
-    vm: InventarioViewModel
+    vm: InventarioViewModel,
+    snackbarHostState: SnackbarHostState // Recibido del Scaffold Global
 ) {
     var tipoTela by remember { mutableStateOf("") }
     var color by remember { mutableStateOf("") }
@@ -39,6 +42,7 @@ fun NuevoRolloScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
     // Función para formatear fecha bonita
     fun formatearFechaBonita(fecha: String): String {
@@ -156,237 +160,99 @@ fun NuevoRolloScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Registrar Nuevo Rollo") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Text("←")
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    if (validarFormulario()) {
-                        val rollo = Rollo(
-                            tipo_tela = tipoTela.trim(),
-                            color = color.trim(),
-                            codigo = codigo.trim(),
-                            cantidad_total = cantidad,
-                            cantidad_restante = cantidad,
-                            proveedor = proveedor.trim().takeIf { it.isNotBlank() },
-                            fecha_compra = fechaCompra.trim().takeIf { it.isNotBlank() },
-                            registrado_por = "Usuario"
-                        )
+    // --- CONTENIDO DE LA PANTALLA ---
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(scrollState), // Scroll para pantallas pequeñas
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Datos del Rollo",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
 
-                        scope.launch {
-                            try {
-                                vm.agregarRollo(rollo)
-                                snackbarHostState.showSnackbar("✅ Rollo registrado correctamente")
-                                navController.popBackStack()
-                            } catch (e: Exception) {
-                                snackbarHostState.showSnackbar("❌ Error al registrar el rollo: ${e.message}")
-                            }
-                        }
-                    } else {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("❌ Revise los campos marcados en rojo")
-                        }
-                    }
-                }
+        OutlinedTextField(
+            value = tipoTela, onValueChange = { tipoTela = it },
+            label = { Text("Tipo de Tela *") }, modifier = Modifier.fillMaxWidth(),
+            isError = errorTipoTela.isNotBlank(),
+            supportingText = { if (errorTipoTela.isNotBlank()) Text(errorTipoTela, color = Color.Red) }
+        )
+
+        OutlinedTextField(
+            value = color, onValueChange = { color = it },
+            label = { Text("Color *") }, modifier = Modifier.fillMaxWidth(),
+            isError = errorColor.isNotBlank(),
+            supportingText = { if (errorColor.isNotBlank()) Text(errorColor, color = Color.Red) }
+        )
+
+        OutlinedTextField(
+            value = codigo, onValueChange = { codigo = it },
+            label = { Text("Código de Rollo *") }, modifier = Modifier.fillMaxWidth(),
+            isError = errorCodigo.isNotBlank(),
+            supportingText = { if (errorCodigo.isNotBlank()) Text(errorCodigo, color = Color.Red) }
+        )
+
+        OutlinedTextField(
+            value = cantidad,
+            onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*\$"))) cantidad = it },
+            label = { Text("Cantidad Inicial (Metros) *") }, modifier = Modifier.fillMaxWidth(),
+            isError = errorCantidad.isNotBlank(),
+            supportingText = { if (errorCantidad.isNotBlank()) Text(errorCantidad, color = Color.Red) }
+        )
+
+        OutlinedTextField(
+            value = proveedor, onValueChange = { proveedor = it },
+            label = { Text("Proveedor (Opcional)") }, modifier = Modifier.fillMaxWidth()
+        )
+
+        // Selector de Fecha
+        OutlinedCard(
+            onClick = { showDatePicker = true },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("💾")
+                Text(if (fechaCompra.isEmpty()) "Seleccionar Fecha de Compra" else "Compra: ${formatearFechaBonita(fechaCompra)}")
+                Text("📅")
             }
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // BOTÓN DE GUARDAR (Sustituye al FAB para mejor usabilidad en formularios)
+        Button(
+            onClick = {
+                if (validarFormulario()) {
+                    val rollo = Rollo(
+                        tipo_tela = tipoTela.trim(),
+                        color = color.trim(),
+                        codigo = codigo.trim(),
+                        cantidad_total = cantidad,
+                        cantidad_restante = cantidad,
+                        proveedor = proveedor.trim().takeIf { it.isNotBlank() },
+                        fecha_compra = fechaCompra.trim().takeIf { it.isNotBlank() },
+                        registrado_por = "Admin"
+                    )
+
+                    scope.launch {
+                        try {
+                            vm.agregarRollo(rollo)
+                            navController.popBackStack()
+                            snackbarHostState.showSnackbar("✅ Rollo registrado con éxito")
+                        } catch (e: Exception) {
+                            snackbarHostState.showSnackbar("❌ Error: ${e.message}")
+                        }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            // Tipo de Tela
-            OutlinedTextField(
-                value = tipoTela,
-                onValueChange = {
-                    tipoTela = it
-                    if (it.length > 50) {
-                        errorTipoTela = "Máximo 50 caracteres"
-                    } else {
-                        errorTipoTela = ""
-                    }
-                },
-                label = { Text("Tipo de Tela *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                isError = errorTipoTela.isNotBlank(),
-                supportingText = {
-                    if (errorTipoTela.isNotBlank()) {
-                        Text(errorTipoTela, color = Color.Red)
-                    } else {
-                        Text("${tipoTela.length}/50 caracteres")
-                    }
-                }
-            )
-
-            // Color
-            OutlinedTextField(
-                value = color,
-                onValueChange = {
-                    color = it
-                    if (it.length > 30) {
-                        errorColor = "Máximo 30 caracteres"
-                    } else {
-                        errorColor = ""
-                    }
-                },
-                label = { Text("Color *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                isError = errorColor.isNotBlank(),
-                supportingText = {
-                    if (errorColor.isNotBlank()) {
-                        Text(errorColor, color = Color.Red)
-                    } else {
-                        Text("${color.length}/30 caracteres")
-                    }
-                }
-            )
-
-            // Código
-            OutlinedTextField(
-                value = codigo,
-                onValueChange = {
-                    codigo = it
-                    if (it.length > 20) {
-                        errorCodigo = "Máximo 20 caracteres"
-                    } else {
-                        errorCodigo = ""
-                    }
-                },
-                label = { Text("Código *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                isError = errorCodigo.isNotBlank(),
-                supportingText = {
-                    if (errorCodigo.isNotBlank()) {
-                        Text(errorCodigo, color = Color.Red)
-                    } else {
-                        Text("${codigo.length}/20 caracteres")
-                    }
-                }
-            )
-
-            // Cantidad (metros)
-            OutlinedTextField(
-                value = cantidad,
-                onValueChange = {
-                    if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*\$"))) {
-                        cantidad = it
-                        errorCantidad = ""
-                    }
-                },
-                label = { Text("Cantidad (metros) *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                isError = errorCantidad.isNotBlank(),
-                supportingText = {
-                    if (errorCantidad.isNotBlank()) {
-                        Text(errorCantidad, color = Color.Red)
-                    } else {
-                        Text("Mínimo: 0.1m - Máximo: 1000m")
-                    }
-                }
-            )
-
-            // Proveedor
-            OutlinedTextField(
-                value = proveedor,
-                onValueChange = {
-                    proveedor = it
-                    if (it.length > 100) {
-                        proveedor = it.take(100)
-                    }
-                },
-                label = { Text("Proveedor (opcional)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                supportingText = {
-                    Text("${proveedor.length}/100 caracteres")
-                }
-            )
-
-            // Fecha de compra - CON CALENDARIO
-            OutlinedTextField(
-                value = if (fechaCompra.isNotBlank()) formatearFechaBonita(fechaCompra) else "",
-                onValueChange = { }, // No permitir edición manual
-                label = { Text("Fecha de compra (opcional)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                readOnly = true,
-                supportingText = {
-                    Text("Toque para seleccionar fecha")
-                },
-                trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Text("📅")
-                    }
-                }
-            )
-
-            // Botón alternativo para abrir calendario
-            Button(
-                onClick = { showDatePicker = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE3F2FD),
-                    contentColor = Color(0xFF1976D2)
-                )
-            ) {
-                Text("📅 Seleccionar Fecha de Compra")
-            }
-
-            // Mostrar fecha seleccionada
-            if (fechaCompra.isNotBlank()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E8))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Fecha seleccionada:", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            formatearFechaBonita(fechaCompra),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF2E7D32)
-                        )
-                    }
-                }
-            }
-
-            // Información de validación
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text("📋 Información de validación:",
-                        style = MaterialTheme.typography.labelMedium)
-                    Text("• Campos con * son obligatorios",
-                        style = MaterialTheme.typography.bodySmall)
-                    Text("• Cantidad: 0.1 - 1000 metros",
-                        style = MaterialTheme.typography.bodySmall)
-                    Text("• Use el calendario para seleccionar fecha",
-                        style = MaterialTheme.typography.bodySmall)
-                }
-            }
+            Text("Guardar Rollo")
         }
     }
 }

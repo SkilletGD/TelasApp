@@ -1,12 +1,16 @@
 package com.example.telasapp.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.telasapp.ui.viewmodel.InventarioViewModel
@@ -17,7 +21,8 @@ import kotlinx.coroutines.launch
 fun VentaScreen(
     navController: NavController,
     rolloId: Int?,
-    vm: InventarioViewModel
+    vm: InventarioViewModel,
+    snackbarHostState: SnackbarHostState
 ) {
     var metrosVendidos by remember { mutableStateOf("") }
     var vendedor by remember { mutableStateOf("") }
@@ -28,161 +33,144 @@ fun VentaScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text("Vender ${rollo?.tipo_tela ?: "Rollo"} - ${rollo?.color ?: ""}")
+    // CONTENIDO PRINCIPAL
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (rollo == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Rollo no encontrado")
+            }
+        } else {
+            // 1. Tarjeta informativa del producto
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "${rollo.tipo_tela} - ${rollo.color}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text("Código: ${rollo.codigo}", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Metros disponibles: ", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "${rollo.cantidad_restante}m",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            // 2. Formulario de venta
+            Text("Detalles de la venta", style = MaterialTheme.typography.labelLarge)
+
+            OutlinedTextField(
+                value = metrosVendidos,
+                onValueChange = {
+                    if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*\$"))) {
+                        metrosVendidos = it
+                    }
                 },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Text("←")
-                    }
-                }
+                label = { Text("Metros a vender *") },
+                placeholder = { Text("Ej: 5.5") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                prefix = { Text("m ") }
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            if (rollo == null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+
+            OutlinedTextField(
+                value = vendedor,
+                onValueChange = { vendedor = it },
+                label = { Text("Nombre del vendedor *") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = cliente,
+                onValueChange = { cliente = it },
+                label = { Text("Cliente (opcional)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            // 3. Botón para vender todo rápido
+            if (rollo.estado == "Disponible") {
+                OutlinedButton(
+                    onClick = { metrosVendidos = rollo.cantidad_restante },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
                 ) {
-                    Text("Rollo no encontrado")
+                    Text("VENDER TODO EL ROLLO (${rollo.cantidad_restante}m)")
                 }
-            } else {
-                // Información del rollo
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Rollo: ${rollo.tipo_tela} - ${rollo.color}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text("Código: ${rollo.codigo}")
-                        Text("Metros disponibles: ${rollo.cantidad_restante}m")
-                        Text(
-                            "Estado: ${rollo.estado}",
-                            color = when(rollo.estado) {
-                                "Disponible" -> Color(0xFF2E7D32)
-                                "Agotado" -> Color(0xFFD32F2F)
-                                "Vendido" -> Color(0xFF1976D2)
-                                else -> MaterialTheme.colorScheme.onSurface
-                            }
-                        )
-                    }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // 4. Botones de acción final
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Cancelar")
                 }
 
-                // Formulario de venta - SIMPLIFICADO (sin keyboardOptions)
-                OutlinedTextField(
-                    value = metrosVendidos,
-                    onValueChange = {
-                        // Validar que solo sean números
-                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*\$"))) {
-                            metrosVendidos = it
+                Button(
+                    onClick = {
+                        val cantNum = metrosVendidos.toDoubleOrNull()
+                        val disponibleNum = rollo.cantidad_restante.toDoubleOrNull() ?: 0.0
+
+                        when {
+                            metrosVendidos.isBlank() || vendedor.isBlank() -> {
+                                scope.launch { snackbarHostState.showSnackbar("❌ Complete los campos requeridos") }
+                            }
+                            cantNum == null || cantNum <= 0 -> {
+                                scope.launch { snackbarHostState.showSnackbar("❌ Ingrese una cantidad válida") }
+                            }
+                            cantNum > disponibleNum -> {
+                                scope.launch { snackbarHostState.showSnackbar("❌ No hay suficientes metros") }
+                            }
+                            else -> {
+                                // 1. Ejecutamos la venta en el ViewModel
+                                vm.registrarVenta(
+                                    rolloId = rollo.id ?: 0,
+                                    metrosVendidos = cantNum,
+                                    vendedor = vendedor,
+                                    cliente = if (cliente.isBlank()) null else cliente
+                                )
+
+                                // 2. REGRESAR PRIMERO
+                                navController.popBackStack()
+
+                                // 3. LANZAR EL MENSAJE DESDE EL VIEWMODEL
+                                // Usamos el scope del VM porque ese NO se muere al cerrar la pantalla
+                                vm.viewModelScope.launch {
+                                    snackbarHostState.showSnackbar("✅ Venta registrada correctamente")
+                                }
+                            }
                         }
                     },
-                    label = { Text("Metros a vender") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = vendedor,
-                    onValueChange = { vendedor = it },
-                    label = { Text("Nombre del vendedor *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = cliente,
-                    onValueChange = { cliente = it },
-                    label = { Text("Cliente (opcional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                // Botones de acción
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.weight(1f),
+                    enabled = rollo.estado == "Disponible"
                 ) {
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        )
-                    ) {
-                        Text("Cancelar")
-                    }
-
-                    Button(
-                        onClick = {
-                            when {
-                                metrosVendidos.isBlank() || vendedor.isBlank() -> {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Complete los campos requeridos")
-                                    }
-                                }
-                                metrosVendidos.toDoubleOrNull() == null -> {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Ingrese una cantidad válida")
-                                    }
-                                }
-                                metrosVendidos.toDouble() <= 0 -> {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("La cantidad debe ser mayor a 0")
-                                    }
-                                }
-                                metrosVendidos.toDouble() > rollo.cantidad_restante.toDouble() -> {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("No hay suficientes metros disponibles")
-                                    }
-                                }
-                                else -> {
-                                    // Llamar a la función de venta del ViewModel
-                                    vm.registrarVenta(
-                                        rolloId = rollo.id ?: 0,
-                                        metrosVendidos = metrosVendidos.toDouble(),
-                                        vendedor = vendedor,
-                                        cliente = if (cliente.isBlank()) null else cliente
-                                    )
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("Venta registrada correctamente")
-                                        navController.popBackStack()
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = rollo.estado == "Disponible"
-                    ) {
-                        Text("Vender")
-                    }
-                }
-
-                /* Botón para vender todo rápido */
-                if (rollo.estado == "Disponible") {
-                    Button(
-                        onClick = {
-                            metrosVendidos = rollo.cantidad_restante
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Text("VENDER TODO (${rollo.cantidad_restante}m)")
-                    }
+                    Text("Registrar Venta")
                 }
             }
         }

@@ -19,7 +19,6 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReporteVentasScreen(
-    navController: NavController,
     vm: InventarioViewModel
 ) {
     val ventas by vm.ventas.collectAsState()
@@ -31,147 +30,108 @@ fun ReporteVentasScreen(
         vm.cargarVentas()
     }
 
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("📊 Reporte de Ventas")
-                        if (isLoading) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-                actions = {
-                    // Botón para actualizar
-                    IconButton(
-                        onClick = {
-                            scope.launch {
-                                vm.cargarVentas()
-                                snackbarHostState.showSnackbar("Ventas actualizadas")
-                            }
-                        }
-                    ) {
-                        Text("🔄")
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
-            // Mostrar mensaje de error si existe
-            errorMessage?.let { message ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text("❌ Error al cargar ventas", color = Color(0xFFD32F2F))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(message, color = Color(0xFFD32F2F))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = {
-                                vm.clearError()
-                                vm.cargarVentas()
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Reintentar")
-                        }
-                    }
-                }
-            }
-
-            // Resumen de ventas
+    // CONTENIDO PRINCIPAL
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        // 1. Mostrar mensaje de error si existe
+        errorMessage?.let { message ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("❌ Error al cargar ventas", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(message, color = Color(0xFFD32F2F), style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            vm.clearError()
+                            vm.cargarVentas()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Reintentar")
+                    }
+                }
+            }
+        }
+
+        // 2. Resumen de ventas (Encabezado informativo)
+        if (ventas.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         "Resumen General",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Total de ventas: ${ventas.size}")
-                    Text("Vendedores: ${ventas.map { it.vendedor }.distinct().size}")
-                    Text("Rollos vendidos: ${ventas.map { it.rollo_id }.distinct().size}")
-                    val totalMetros = ventas.sumOf { it.cantidad_vendida }
-                    Text("Total metros vendidos: ${"%.2f".format(totalMetros)}m")
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Column {
+                            Text("Ventas: ${ventas.size}", style = MaterialTheme.typography.bodyMedium)
+                            Text("Vendedores: ${ventas.map { it.vendedor }.distinct().size}", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            val totalMetros = ventas.sumOf { it.cantidad_vendida }
+                            Text("Total Metros", style = MaterialTheme.typography.labelSmall)
+                            Text("${"%.2f".format(totalMetros)}m",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             }
+        }
 
-            // Estado de carga
-            if (isLoading && ventas.isEmpty()) {
+        // 3. Estados de Carga / Vacío / Lista
+        when {
+            isLoading && ventas.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            ventas.isEmpty() && !isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Text("📈", style = MaterialTheme.typography.displayLarge)
+                        Text("No hay ventas registradas", style = MaterialTheme.typography.titleMedium)
+                        Text("Las ventas aparecerán aquí", color = Color.Gray)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Cargando reporte de ventas...")
+                        Button(onClick = { vm.cargarVentas() }) {
+                            Text("Actualizar")
+                        }
                     }
                 }
             }
-            // Estado vacío
-            else if (ventas.isEmpty() && !isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(32.dp)
-                    ) {
-                        Text("📈", style = MaterialTheme.typography.displayMedium)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "No hay ventas registradas",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            "Las ventas aparecerán aquí cuando se realicen",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            // Lista de ventas
-            else {
+            else -> {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    item {
+                        Text(
+                            "Historial Reciente",
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
                     items(ventas) { venta ->
                         VentaItem(venta = venta)
                     }
@@ -185,49 +145,56 @@ fun ReporteVentasScreen(
 fun VentaItem(venta: com.example.telasapp.data.models.Venta) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header con información principal
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Text(
-                        text = "Venta #${venta.id ?: "N/A"}",
+                        text = "Venta #${venta.id ?: "---"}",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "Rollo ID: ${venta.rollo_id}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.Gray
                     )
                 }
-                Text(
-                    text = "${venta.cantidad_vendida}m",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = "${venta.cantidad_vendida}m",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Divider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
 
-            // Información de la venta - SOLO PROPIEDADES QUE EXISTEN
-            Column {
-                Text("Vendedor: ${venta.vendedor}")
-
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Vendedor", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(venta.vendedor, style = MaterialTheme.typography.bodyMedium)
+                }
                 venta.cliente?.let { cliente ->
                     if (cliente.isNotBlank()) {
-                        Text("Cliente: $cliente")
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Cliente", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            Text(cliente, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
-
-                // Nota: fecha_venta no existe en tu data class actual
-                // Se agregaría automáticamente desde la base de datos
-                Text("ID de Rollo: ${venta.rollo_id}")
             }
         }
     }
