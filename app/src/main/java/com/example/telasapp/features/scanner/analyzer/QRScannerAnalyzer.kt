@@ -1,4 +1,4 @@
-package com.example.telasapp.features.scanner
+package com.example.telasapp.features.scanner.analyzer
 
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis

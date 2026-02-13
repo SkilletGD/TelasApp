@@ -1,10 +1,8 @@
-package com.example.telasapp.ui.screens
+package com.example.telasapp.features.sales.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,14 +10,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import com.example.telasapp.ui.viewmodel.InventarioViewModel
-import kotlinx.coroutines.launch
+import com.example.telasapp.data.models.Venta
+import com.example.telasapp.features.sales.viewmodel.SalesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReporteVentasScreen(
-    vm: InventarioViewModel
+    vm: SalesViewModel // Cambiado de General a Sales
 ) {
     val ventas by vm.ventas.collectAsState()
     val isLoading by vm.isLoading.collectAsState()
@@ -142,7 +139,7 @@ fun ReporteVentasScreen(
 }
 
 @Composable
-fun VentaItem(venta: com.example.telasapp.data.models.Venta) {
+fun VentaItem(venta: Venta) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),

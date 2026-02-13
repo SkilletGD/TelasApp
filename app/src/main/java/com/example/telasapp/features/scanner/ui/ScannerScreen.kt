@@ -1,4 +1,4 @@
-package com.example.telasapp.ui.screens
+package com.example.telasapp.features.scanner.ui
 
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import com.example.telasapp.features.scanner.QRScannerAnalyzer
+import com.example.telasapp.features.scanner.analyzer.QRScannerAnalyzer
 import java.util.concurrent.Executors
 
 @Composable

@@ -1,4 +1,4 @@
-package com.example.telasapp.ui.screens
+package com.example.telasapp.features.registration.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,20 +8,23 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.telasapp.data.models.Rollo
-import com.example.telasapp.ui.viewmodel.InventarioViewModel
+import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
+import com.example.telasapp.features.registration.viewmodel.RegistrationViewModel
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NuevoRolloScreen(
     navController: NavController,
-    vm: InventarioViewModel,
-    snackbarHostState: SnackbarHostState // Recibido del Scaffold Global
+    regVm: RegistrationViewModel, // El nuevo especializado
+    invVm: InventarioViewModel,   // Solo para refrescar la lista al terminar
+    snackbarHostState: SnackbarHostState
 ) {
     var tipoTela by remember { mutableStateOf("") }
     var color by remember { mutableStateOf("") }
@@ -44,6 +47,10 @@ fun NuevoRolloScreen(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
+    LaunchedEffect(Unit) {
+        regVm.eventos.collect { snackbarHostState.showSnackbar(it) }
+    }
+
     // Función para formatear fecha bonita
     fun formatearFechaBonita(fecha: String): String {
         return try {
@@ -58,8 +65,8 @@ fun NuevoRolloScreen(
     // Función para manejar la fecha seleccionada
     fun onFechaSeleccionada() {
         datePickerState.selectedDateMillis?.let { millis ->
-            val localDate = java.time.Instant.ofEpochMilli(millis)
-                .atZone(java.time.ZoneId.systemDefault())
+            val localDate = Instant.ofEpochMilli(millis)
+                .atZone(ZoneId.systemDefault())
                 .toLocalDate()
 
             fechaCompra = localDate.format(DateTimeFormatter.ISO_DATE)
@@ -224,10 +231,9 @@ fun NuevoRolloScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // BOTÓN DE GUARDAR (Sustituye al FAB para mejor usabilidad en formularios)
         Button(
             onClick = {
-                if (validarFormulario()) {
+                if (validarFormulario()) { // Usando tu función de validación
                     val rollo = Rollo(
                         tipo_tela = tipoTela.trim(),
                         color = color.trim(),
@@ -239,14 +245,9 @@ fun NuevoRolloScreen(
                         registrado_por = "Admin"
                     )
 
-                    scope.launch {
-                        try {
-                            vm.agregarRollo(rollo)
-                            navController.popBackStack()
-                            snackbarHostState.showSnackbar("✅ Rollo registrado con éxito")
-                        } catch (e: Exception) {
-                            snackbarHostState.showSnackbar("❌ Error: ${e.message}")
-                        }
+                    regVm.agregarRollo(rollo) {
+                        invVm.cargarRollos() // Refrescamos la lista del inventario
+                        navController.popBackStack()
                     }
                 }
             },

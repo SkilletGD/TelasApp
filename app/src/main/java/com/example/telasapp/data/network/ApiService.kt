@@ -44,4 +44,9 @@ object ApiService {
     suspend fun obtenerVentas(): List<Venta> {
         return client.get("$BASE_URL/ventas").body()
     }
+
+    // --- ESTA ES LA QUE TE FALTABA PARA EL DETALLE ---
+    suspend fun obtenerRolloPorId(id: Int): Rollo {
+        return client.get("$BASE_URL/rollos/$id").body()
+    }
 }

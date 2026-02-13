@@ -3,9 +3,9 @@ package com.example.telasapp.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -25,11 +25,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.telasapp.navigation.AppNavigation
-import com.example.telasapp.ui.viewmodel.InventarioViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TelasMainScreen(viewModel: InventarioViewModel = viewModel()) {
+fun TelasMainScreen() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -61,8 +60,17 @@ fun TelasMainScreen(viewModel: InventarioViewModel = viewModel()) {
                         }
                     },
                     actions = {
-                        // Aquí ponemos los botones de Reportes que estaban en tu TopBar original
+                        // Solo mostramos estas acciones si estamos en la pantalla principal
                         if (currentRoute == "inventario") {
+                            // BOTÓN DEL SCANNER (El que te faltaba)
+                            IconButton(onClick = { navController.navigate("scanner") }) {
+                                Icon(
+                                    imageVector = Icons.Default.QrCodeScanner,
+                                    contentDescription = "Escanear QR"
+                                )
+                            }
+
+                            // BOTÓN DE REPORTES
                             IconButton(onClick = { navController.navigate("reporteVentas") }) {
                                 Text("📊", style = MaterialTheme.typography.bodyLarge)
                             }
@@ -88,7 +96,6 @@ fun TelasMainScreen(viewModel: InventarioViewModel = viewModel()) {
         Box(modifier = Modifier.padding(innerPadding)) {
             AppNavigation(
                 navController = navController,
-                viewModel = viewModel,
                 snackbarHostState = snackbarHostState // Lo pasamos para que las screens lo usen
             )
         }

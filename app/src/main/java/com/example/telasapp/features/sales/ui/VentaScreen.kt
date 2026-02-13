@@ -1,4 +1,4 @@
-package com.example.telasapp.ui.screens
+package com.example.telasapp.features.sales.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -7,13 +7,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.telasapp.ui.viewmodel.InventarioViewModel
+import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
+import com.example.telasapp.features.sales.viewmodel.SalesViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -21,21 +20,24 @@ import kotlinx.coroutines.launch
 fun VentaScreen(
     navController: NavController,
     rolloId: Int?,
-    vm: InventarioViewModel,
+    salesVm: SalesViewModel,
+    invVm: InventarioViewModel,
     snackbarHostState: SnackbarHostState
 ) {
     var metrosVendidos by remember { mutableStateOf("") }
     var vendedor by remember { mutableStateOf("") }
     var cliente by remember { mutableStateOf("") }
 
-    val rollos by vm.rollos.collectAsState()
-    val rollo = rollos.find { it.id == rolloId }
-
-    val snackbarHostState = remember { SnackbarHostState() }
+    // Obtenemos el rollo del SalesViewModel
+    val rollo by salesVm.rolloActual.collectAsState()
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
-    // CONTENIDO PRINCIPAL
+    // Cargar datos al iniciar
+    LaunchedEffect(rolloId) {
+        rolloId?.let { salesVm.cargarRolloParaVenta(it) }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -45,27 +47,31 @@ fun VentaScreen(
     ) {
         if (rollo == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Rollo no encontrado")
+                CircularProgressIndicator() // Muestra carga mientras llega el dato
             }
         } else {
-            // 1. Tarjeta informativa del producto
+            // --- LA SOLUCIÓN ESTÁ AQUÍ ---
+            // Creamos una variable local 'r' que Kotlin sí puede validar (Smart Cast)
+            val r = rollo!!
+
+            // 1. Tarjeta informativa
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "${rollo.tipo_tela} - ${rollo.color}",
+                        text = "${r.tipo_tela} - ${r.color}",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    Text("Código: ${rollo.codigo}", style = MaterialTheme.typography.bodyMedium)
+                    Text("Código: ${r.codigo}", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Metros disponibles: ", style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            "${rollo.cantidad_restante}m",
+                            text = "${r.cantidad_restante}m",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -74,20 +80,14 @@ fun VentaScreen(
                 }
             }
 
-            // 2. Formulario de venta
+            // 2. Formulario
             Text("Detalles de la venta", style = MaterialTheme.typography.labelLarge)
 
             OutlinedTextField(
                 value = metrosVendidos,
-                onValueChange = {
-                    if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*\$"))) {
-                        metrosVendidos = it
-                    }
-                },
+                onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) metrosVendidos = it },
                 label = { Text("Metros a vender *") },
-                placeholder = { Text("Ej: 5.5") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
                 prefix = { Text("m ") }
             )
 
@@ -95,80 +95,69 @@ fun VentaScreen(
                 value = vendedor,
                 onValueChange = { vendedor = it },
                 label = { Text("Nombre del vendedor *") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                modifier = Modifier.fillMaxWidth()
             )
 
             OutlinedTextField(
                 value = cliente,
                 onValueChange = { cliente = it },
                 label = { Text("Cliente (opcional)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                modifier = Modifier.fillMaxWidth()
             )
 
-            // 3. Botón para vender todo rápido
-            if (rollo.estado == "Disponible") {
+            // 3. Botón venta rápida
+            if (r.estado == "Disponible") {
                 OutlinedButton(
-                    onClick = { metrosVendidos = rollo.cantidad_restante },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.tertiary)
+                    onClick = { metrosVendidos = r.cantidad_restante.toString() },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("VENDER TODO EL ROLLO (${rollo.cantidad_restante}m)")
+                    Text("VENDER TODO EL ROLLO (${r.cantidad_restante}m)")
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 4. Botones de acción final
+            // 4. Botones finales
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.weight(1f)
-                ) {
+                OutlinedButton(onClick = { navController.popBackStack() }, modifier = Modifier.weight(1f)) {
                     Text("Cancelar")
                 }
 
                 Button(
                     onClick = {
                         val cantNum = metrosVendidos.toDoubleOrNull()
-                        val disponibleNum = rollo.cantidad_restante.toDoubleOrNull() ?: 0.0
+                        val disponibleNum = r.cantidad_restante.toDoubleOrNull() ?: 0.0
 
                         when {
                             metrosVendidos.isBlank() || vendedor.isBlank() -> {
-                                scope.launch { snackbarHostState.showSnackbar("❌ Complete los campos requeridos") }
+                                scope.launch { snackbarHostState.showSnackbar("❌ Complete campos") }
                             }
                             cantNum == null || cantNum <= 0 -> {
-                                scope.launch { snackbarHostState.showSnackbar("❌ Ingrese una cantidad válida") }
+                                scope.launch { snackbarHostState.showSnackbar("❌ Cantidad no válida") }
                             }
                             cantNum > disponibleNum -> {
-                                scope.launch { snackbarHostState.showSnackbar("❌ No hay suficientes metros") }
+                                scope.launch { snackbarHostState.showSnackbar("❌ Stock insuficiente") }
                             }
                             else -> {
-                                // 1. Ejecutamos la venta en el ViewModel
-                                vm.registrarVenta(
-                                    rolloId = rollo.id ?: 0,
-                                    metrosVendidos = cantNum,
+                                // AQUÍ ESTÁ EL CAMBIO:
+                                // Usamos !! porque ya verificamos arriba que 'r' no es null
+                                salesVm.registrarVenta(
+                                    rolloId = r.id!!, // Se agrega !! para convertir Int? a Int
+                                    metros = cantNum,
                                     vendedor = vendedor,
-                                    cliente = if (cliente.isBlank()) null else cliente
-                                )
-
-                                // 2. REGRESAR PRIMERO
-                                navController.popBackStack()
-
-                                // 3. LANZAR EL MENSAJE DESDE EL VIEWMODEL
-                                // Usamos el scope del VM porque ese NO se muere al cerrar la pantalla
-                                vm.viewModelScope.launch {
-                                    snackbarHostState.showSnackbar("✅ Venta registrada correctamente")
+                                    cliente = cliente.ifBlank { null }
+                                ) {
+                                    invVm.cargarRollos()
+                                    navController.popBackStack()
                                 }
                             }
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = rollo.estado == "Disponible"
+                    enabled = r.estado == "Disponible"
                 ) {
                     Text("Registrar Venta")
                 }
