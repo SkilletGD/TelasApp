@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.telasapp.core.components.TelasTextField
+import com.example.telasapp.features.cart.data.models.CartItem
+import com.example.telasapp.features.cart.viewmodel.CartViewModel
 import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
 import com.example.telasapp.features.sales.ui.components.RolloInfoCard
 import com.example.telasapp.features.sales.ui.components.VentaActionsRow
@@ -25,6 +27,7 @@ fun VentaScreen(
     navController: NavController,
     rolloId: Int?,
     salesVm: SalesViewModel,
+    cartVm: CartViewModel,
     invVm: InventarioViewModel,
     snackbarHostState: SnackbarHostState
 ) {
@@ -83,6 +86,35 @@ fun VentaScreen(
             }
 
             Spacer(Modifier.weight(1f))
+
+            if (r.estado == "Disponible") {
+                Button(
+                    onClick = {
+                        val cantNum = metrosVendidos.toDoubleOrNull()
+                        val disponibleNum = r.cantidad_restante.toDoubleOrNull() ?: 0.0
+
+                        if (cantNum != null && cantNum > 0 && cantNum <= disponibleNum && vendedor.isNotBlank()) {
+                            cartVm.agregar(
+                                CartItem(
+                                    rolloId = r.id!!,
+                                    tipoTela = r.tipo_tela,
+                                    color = r.color,
+                                    metros = cantNum,
+                                    vendedor = vendedor,
+                                    cliente = cliente.ifBlank { null }
+                                )
+                            )
+                            scope.launch { snackbarHostState.showSnackbar("✅ Agregado al carrito") }
+                        } else {
+                            scope.launch { snackbarHostState.showSnackbar("❌ Revisa los datos") }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("Agregar al Carrito")
+                }
+            }
 
             // 3. Botones de acción
             VentaActionsRow(

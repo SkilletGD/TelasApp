@@ -33,5 +33,6 @@ fun VentaActionsRow(
         ) {
             Text("Registrar Venta")
         }
+
     }
 }

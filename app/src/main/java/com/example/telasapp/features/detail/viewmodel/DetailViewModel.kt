@@ -24,11 +24,16 @@ class DetailViewModel : ViewModel() {
     fun actualizarRollo(rollo: Rollo, onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
-                ApiService.actualizarRollo(rollo)
-                _eventos.emit("✅ Cambios guardados")
-                onSuccess()
+                val exito = ApiService.actualizarRollo(rollo) // Ahora devuelve Boolean
+                if (exito) {
+                    _eventos.emit("✅ Cambios guardados")
+                    onSuccess()
+                } else {
+                    _eventos.emit("❌ El servidor rechazó los cambios")
+                }
             } catch (e: Exception) {
-                _eventos.emit("❌ Error al guardar")
+                println("Error Ktor: ${e.message}") // Para que lo veas en Logcat
+                _eventos.emit("❌ Error de conexión")
             }
         }
     }

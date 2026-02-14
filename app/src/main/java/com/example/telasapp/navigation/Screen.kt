@@ -14,9 +14,11 @@ sealed class Screen(val route: String, val title: String? = null, val icon: Imag
     object Perfil : Screen("perfil", "Perfil", Icons.Default.Person)
 
     // Pantallas secundarias
-    object DetalleRollo : Screen("detalle/{rolloId}")
+    object DetalleRollo : Screen("detalleRollo/{rolloId}")
     object Venta : Screen("venta/{rolloId}")
     object Registro : Screen("registro")
     // Asegúrate de que esta línea exista:
     object Scanner : Screen("scanner")
+
+    object ReporteVentas : Screen("reporteVentas")
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.telasapp.data.models.Rollo
 import com.example.telasapp.data.models.Venta
 import com.example.telasapp.data.network.ApiService
+import com.example.telasapp.features.cart.data.models.CartItem
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,6 +65,34 @@ class SalesViewModel : ViewModel() {
                 onSuccess()
             } catch (e: Exception) {
                 _eventos.emit("❌ Error: ${e.message}")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * NUEVA FUNCIÓN: Registro masivo para el carrito
+     */
+    fun registrarVentaMasiva(items: List<CartItem>, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // Iteramos sobre los items del carrito y registramos cada uno
+                items.forEach { item ->
+                    val venta = Venta(
+                        rollo_id = item.rolloId,
+                        cantidad_vendida = item.metros,
+                        vendedor = item.vendedor,
+                        cliente = item.cliente
+                    )
+                    ApiService.registrarVenta(venta)
+                }
+
+                _eventos.emit("✅ Pedido completo registrado (${items.size} productos)")
+                onSuccess()
+            } catch (e: Exception) {
+                _eventos.emit("❌ Error en el pedido: ${e.message}")
             } finally {
                 _isLoading.value = false
             }

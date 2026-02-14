@@ -10,6 +10,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.telasapp.features.cart.ui.CartScreen
+import com.example.telasapp.features.cart.viewmodel.CartViewModel
 import com.example.telasapp.features.detail.ui.DetailScreen
 import com.example.telasapp.features.detail.viewmodel.DetailViewModel
 import com.example.telasapp.features.inventory.ui.InventarioScreen
@@ -31,6 +33,9 @@ fun AppNavigation(
     snackbarHostState: SnackbarHostState,
     paddingValues: PaddingValues // <-- NUEVO: Recibe el padding del Scaffold
 ) {
+    // ESTA es la única instancia que debe existir
+    val sharedCartVm: CartViewModel = viewModel()
+
     NavHost(
         navController = navController,
         startDestination = Screen.Inventario.route,
@@ -41,11 +46,6 @@ fun AppNavigation(
         composable(Screen.Inventario.route) {
             val invViewModel: InventarioViewModel = viewModel()
             InventarioScreen(navController, invViewModel, snackbarHostState)
-        }
-
-        composable(Screen.Carrito.route) {
-            // CartScreen(navController)
-            Text("Pantalla de Carrito") // Temporal hasta que la crees
         }
 
         composable(Screen.Perfil.route) {
@@ -69,7 +69,7 @@ fun AppNavigation(
             val salesVm: SalesViewModel = viewModel()
             val invVm: InventarioViewModel = viewModel()
             val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()
-            VentaScreen(navController, rolloId, salesVm, invVm, snackbarHostState)
+            VentaScreen(navController, rolloId, salesVm, cartVm = sharedCartVm, invVm, snackbarHostState)
         }
 
         composable(Screen.DetalleRollo.route) { backStackEntry ->
@@ -82,6 +82,18 @@ fun AppNavigation(
         composable("reporteVentas") { // Puedes dejarla así o subirla a Screen.kt
             val salesVm: SalesViewModel = viewModel()
             ReporteVentasScreen(vm = salesVm)
+        }
+
+        composable(Screen.Carrito.route) {
+            val salesVm: SalesViewModel = viewModel()
+            val invVm: InventarioViewModel = viewModel()
+
+            CartScreen(
+                navController = navController,
+                cartVm = sharedCartVm, // USAR LA INSTANCIA COMPARTIDA
+                salesVm = salesVm,
+                invVm = invVm
+            )
         }
     }
 }

@@ -21,11 +21,14 @@ object ApiService {
             setBody(rollo)
         }.body()
 
-    suspend fun actualizarRollo(rollo: Rollo): Rollo =
-        client.put("$BASE_URL/rollos/${rollo.id}") {
+    suspend fun actualizarRollo(rollo: Rollo): Boolean {
+        val response = client.put("$BASE_URL/rollos/${rollo.id}") {
             contentType(ContentType.Application.Json)
             setBody(rollo)
-        }.body()
+        }
+        // Verificamos si fue exitoso (200 OK o 204 No Content)
+        return response.status.isSuccess()
+    }
 
     // En tu ApiService.kt - AGREGA esta función
     suspend fun eliminarRollo(rolloId: Int): Boolean {
