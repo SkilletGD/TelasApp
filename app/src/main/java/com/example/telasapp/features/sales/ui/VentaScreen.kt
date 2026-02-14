@@ -8,10 +8,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import com.example.telasapp.core.components.TelasTextField
 import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
+import com.example.telasapp.features.sales.ui.components.RolloInfoCard
+import com.example.telasapp.features.sales.ui.components.VentaActionsRow
 import com.example.telasapp.features.sales.viewmodel.SalesViewModel
 import kotlinx.coroutines.launch
 
@@ -28,84 +32,47 @@ fun VentaScreen(
     var vendedor by remember { mutableStateOf("") }
     var cliente by remember { mutableStateOf("") }
 
-    // Obtenemos el rollo del SalesViewModel
     val rollo by salesVm.rolloActual.collectAsState()
     val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
 
-    // Cargar datos al iniciar
     LaunchedEffect(rolloId) {
         rolloId?.let { salesVm.cargarRolloParaVenta(it) }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        if (rollo == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator() // Muestra carga mientras llega el dato
-            }
-        } else {
-            // --- LA SOLUCIÓN ESTÁ AQUÍ ---
-            // Creamos una variable local 'r' que Kotlin sí puede validar (Smart Cast)
-            val r = rollo!!
+    if (rollo == null) {
+        Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+    } else {
+        val r = rollo!!
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 1. Componente extraído
+            RolloInfoCard(rollo = r)
 
-            // 1. Tarjeta informativa
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "${r.tipo_tela} - ${r.color}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text("Código: ${r.codigo}", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Metros disponibles: ", style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            text = "${r.cantidad_restante}m",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-
-            // 2. Formulario
             Text("Detalles de la venta", style = MaterialTheme.typography.labelLarge)
 
-            OutlinedTextField(
+            // 2. Usando tu componente modular compartido
+            TelasTextField(
                 value = metrosVendidos,
                 onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) metrosVendidos = it },
-                label = { Text("Metros a vender *") },
-                modifier = Modifier.fillMaxWidth(),
-                prefix = { Text("m ") }
+                label = "Metros a vender *",
+                prefix = { Text("m ") },
+                keyboardType = KeyboardType.Decimal
             )
 
-            OutlinedTextField(
+            TelasTextField(
                 value = vendedor,
                 onValueChange = { vendedor = it },
-                label = { Text("Nombre del vendedor *") },
-                modifier = Modifier.fillMaxWidth()
+                label = "Nombre del vendedor *"
             )
 
-            OutlinedTextField(
+            TelasTextField(
                 value = cliente,
                 onValueChange = { cliente = it },
-                label = { Text("Cliente (opcional)") },
-                modifier = Modifier.fillMaxWidth()
+                label = "Cliente (opcional)"
             )
 
-            // 3. Botón venta rápida
             if (r.estado == "Disponible") {
                 OutlinedButton(
                     onClick = { metrosVendidos = r.cantidad_restante.toString() },
@@ -115,53 +82,35 @@ fun VentaScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
 
-            // 4. Botones finales
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(onClick = { navController.popBackStack() }, modifier = Modifier.weight(1f)) {
-                    Text("Cancelar")
-                }
+            // 3. Botones de acción
+            VentaActionsRow(
+                onCancel = { navController.popBackStack() },
+                onConfirm = {
+                    val cantNum = metrosVendidos.toDoubleOrNull()
+                    val disponibleNum = r.cantidad_restante.toDoubleOrNull() ?: 0.0
 
-                Button(
-                    onClick = {
-                        val cantNum = metrosVendidos.toDoubleOrNull()
-                        val disponibleNum = r.cantidad_restante.toDoubleOrNull() ?: 0.0
-
-                        when {
-                            metrosVendidos.isBlank() || vendedor.isBlank() -> {
-                                scope.launch { snackbarHostState.showSnackbar("❌ Complete campos") }
-                            }
-                            cantNum == null || cantNum <= 0 -> {
-                                scope.launch { snackbarHostState.showSnackbar("❌ Cantidad no válida") }
-                            }
-                            cantNum > disponibleNum -> {
-                                scope.launch { snackbarHostState.showSnackbar("❌ Stock insuficiente") }
-                            }
-                            else -> {
-                                // AQUÍ ESTÁ EL CAMBIO:
-                                // Usamos !! porque ya verificamos arriba que 'r' no es null
-                                salesVm.registrarVenta(
-                                    rolloId = r.id!!, // Se agrega !! para convertir Int? a Int
-                                    metros = cantNum,
-                                    vendedor = vendedor,
-                                    cliente = cliente.ifBlank { null }
-                                ) {
-                                    invVm.cargarRollos()
-                                    navController.popBackStack()
-                                }
+                    when {
+                        metrosVendidos.isBlank() || vendedor.isBlank() -> {
+                            scope.launch { snackbarHostState.showSnackbar("❌ Complete campos") }
+                        }
+                        cantNum == null || cantNum <= 0 -> {
+                            scope.launch { snackbarHostState.showSnackbar("❌ Cantidad no válida") }
+                        }
+                        cantNum > disponibleNum -> {
+                            scope.launch { snackbarHostState.showSnackbar("❌ Stock insuficiente") }
+                        }
+                        else -> {
+                            salesVm.registrarVenta(r.id!!, cantNum, vendedor, cliente.ifBlank { null }) {
+                                invVm.cargarRollos()
+                                navController.popBackStack()
                             }
                         }
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = r.estado == "Disponible"
-                ) {
-                    Text("Registrar Venta")
-                }
-            }
+                    }
+                },
+                enabled = r.estado == "Disponible"
+            )
         }
     }
 }

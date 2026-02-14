@@ -1,7 +1,11 @@
 package com.example.telasapp.navigation
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -13,68 +17,69 @@ import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
 import com.example.telasapp.features.registration.ui.NuevoRolloScreen
 import com.example.telasapp.features.registration.viewmodel.RegistrationViewModel
 import com.example.telasapp.features.sales.ui.VentaScreen
-import com.example.telasapp.features.sales.ui.ReporteVentasScreen  // ¡NUEVA IMPORTACIÓN!
+import com.example.telasapp.features.sales.ui.ReporteVentasScreen
 import com.example.telasapp.features.sales.viewmodel.SalesViewModel
 import com.example.telasapp.features.scanner.ui.ScannerScreen
+
+// Importa tus futuras pantallas (puedes crearlas vacías por ahora para que no de error)
+// import com.example.telasapp.features.cart.ui.CartScreen
+// import com.example.telasapp.features.profile.ui.ProfileScreen
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
-    snackbarHostState: SnackbarHostState
+    snackbarHostState: SnackbarHostState,
+    paddingValues: PaddingValues // <-- NUEVO: Recibe el padding del Scaffold
 ) {
-    NavHost(navController = navController, startDestination = "inventario") {
-        composable("inventario") {
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Inventario.route,
+        modifier = Modifier.padding(paddingValues) // <-- APLICA EL PADDING AQUÍ
+    ) {
+        // --- PANTALLAS PRINCIPALES (Bottom Bar) ---
+
+        composable(Screen.Inventario.route) {
             val invViewModel: InventarioViewModel = viewModel()
-            InventarioScreen(
-                navController = navController,
-                vm = invViewModel,
-                snackbarHostState = snackbarHostState
-            )
+            InventarioScreen(navController, invViewModel, snackbarHostState)
         }
-        composable("nuevoRollo") {
+
+        composable(Screen.Carrito.route) {
+            // CartScreen(navController)
+            Text("Pantalla de Carrito") // Temporal hasta que la crees
+        }
+
+        composable(Screen.Perfil.route) {
+            // ProfileScreen(navController)
+            Text("Pantalla de Perfil") // Temporal hasta que la crees
+        }
+
+        // --- PANTALLAS SECUNDARIAS ---
+
+        composable(Screen.Registro.route) {
             val regVm: RegistrationViewModel = viewModel()
             val invVm: InventarioViewModel = viewModel()
-
-            NuevoRolloScreen(
-                navController = navController,
-                regVm = regVm,
-                invVm = invVm,
-                snackbarHostState = snackbarHostState
-            )
+            NuevoRolloScreen(navController, regVm, invVm, snackbarHostState)
         }
-        composable("venta/{rolloId}") { backStackEntry ->
+
+        composable(Screen.Scanner.route) {
+            ScannerScreen(navController)
+        }
+
+        composable(Screen.Venta.route) { backStackEntry ->
             val salesVm: SalesViewModel = viewModel()
             val invVm: InventarioViewModel = viewModel()
             val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()
+            VentaScreen(navController, rolloId, salesVm, invVm, snackbarHostState)
+        }
 
-            VentaScreen(
-                navController = navController,
-                rolloId = rolloId,
-                salesVm = salesVm,
-                invVm = invVm,
-                snackbarHostState = snackbarHostState
-            )
-        }
-        // --- ESTO ES LO QUE TE FALTA ---
-        composable("scanner") {
-            ScannerScreen(navController)
-        }
-        composable("detalleRollo/{rolloId}") { backStackEntry ->
-            // Importamos los ViewModels de sus respectivas features
+        composable(Screen.DetalleRollo.route) { backStackEntry ->
             val invVm: InventarioViewModel = viewModel()
             val detailVm: DetailViewModel = viewModel()
             val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()
-
-            DetailScreen(
-                navController = navController,
-                rolloId = rolloId,
-                detailVm = detailVm,
-                invVm = invVm,
-                snackbarHostState = snackbarHostState
-            )
+            DetailScreen(navController, rolloId, detailVm, invVm, snackbarHostState)
         }
-        // ¡NUEVA RUTA PARA REPORTES DE VENTAS!
-        composable("reporteVentas") {
+
+        composable("reporteVentas") { // Puedes dejarla así o subirla a Screen.kt
             val salesVm: SalesViewModel = viewModel()
             ReporteVentasScreen(vm = salesVm)
         }

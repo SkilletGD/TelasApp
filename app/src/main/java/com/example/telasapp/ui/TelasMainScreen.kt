@@ -6,25 +6,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.telasapp.core.components.BottomNavigationBar // IMPORTA TU BARRA
 import com.example.telasapp.navigation.AppNavigation
+import com.example.telasapp.navigation.Screen // IMPORTA TUS RUTAS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,44 +24,45 @@ fun TelasMainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // El SnackbarHostState ahora es UNICO para toda la app
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Definimos qué pantallas son las "principales" (donde se verá la BottomBar)
+    val rootScreens = listOf(
+        Screen.Inventario.route,
+        Screen.Carrito.route,
+        Screen.Perfil.route
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            // No mostramos barra en el scanner para que sea pantalla completa
-            if (currentRoute != "scanner") {
+            // No mostramos barra en el scanner
+            if (currentRoute != Screen.Scanner.route) {
                 TopAppBar(
                     title = {
                         Text(when {
-                            currentRoute == "inventario" -> "Inventario de Telas"
-                            currentRoute == "nuevoRollo" -> "Nuevo Rollo"
-                            currentRoute == "reporteVentas" -> "Reporte de Ventas"
+                            currentRoute == Screen.Inventario.route -> "Inventario"
+                            currentRoute == Screen.Carrito.route -> "Mi Carrito"
+                            currentRoute == Screen.Perfil.route -> "Mi Perfil"
+                            currentRoute == Screen.Registro.route -> "Nuevo Rollo"
                             currentRoute?.startsWith("venta") == true -> "Registrar Venta"
-                            currentRoute?.startsWith("detalleRollo") == true -> "Detalle del Rollo"
+                            currentRoute?.startsWith("detalle") == true -> "Detalle del Rollo"
                             else -> "TelasApp"
                         })
                     },
                     navigationIcon = {
-                        if (currentRoute != "inventario") {
+                        // Solo mostramos flecha si NO es una pantalla raíz
+                        if (currentRoute !in rootScreens) {
                             IconButton(onClick = { navController.popBackStack() }) {
                                 Icon(Icons.Default.ArrowBack, "Atrás")
                             }
                         }
                     },
                     actions = {
-                        // Solo mostramos estas acciones si estamos en la pantalla principal
-                        if (currentRoute == "inventario") {
-                            // BOTÓN DEL SCANNER (El que te faltaba)
-                            IconButton(onClick = { navController.navigate("scanner") }) {
-                                Icon(
-                                    imageVector = Icons.Default.QrCodeScanner,
-                                    contentDescription = "Escanear QR"
-                                )
+                        if (currentRoute == Screen.Inventario.route) {
+                            IconButton(onClick = { navController.navigate(Screen.Scanner.route) }) {
+                                Icon(Icons.Default.QrCodeScanner, "Escanear QR")
                             }
-
-                            // BOTÓN DE REPORTES
                             IconButton(onClick = { navController.navigate("reporteVentas") }) {
                                 Text("📊", style = MaterialTheme.typography.bodyLarge)
                             }
@@ -83,21 +75,27 @@ fun TelasMainScreen() {
                 )
             }
         },
+        // --- AQUÍ APLICAMOS LA BOTTOM BAR ---
+        bottomBar = {
+            // Solo se muestra en las pantallas principales (Home, Carrito, Perfil)
+            if (currentRoute in rootScreens) {
+                BottomNavigationBar(navController)
+            }
+        },
         floatingActionButton = {
-            // El botón de AGREGAR (FAB) vuelve a aparecer aquí
-            if (currentRoute == "inventario") {
-                FloatingActionButton(onClick = { navController.navigate("nuevoRollo") }) {
+            // El FAB solo en el inventario para no estorbar en el perfil o carrito
+            if (currentRoute == Screen.Inventario.route) {
+                FloatingActionButton(onClick = { navController.navigate(Screen.Registro.route) }) {
                     Icon(Icons.Default.Add, "Agregar rollo")
                 }
             }
         }
     ) { innerPadding ->
-        // El padding del Scaffold se aplica aquí una sola vez
-        Box(modifier = Modifier.padding(innerPadding)) {
-            AppNavigation(
-                navController = navController,
-                snackbarHostState = snackbarHostState // Lo pasamos para que las screens lo usen
-            )
-        }
+        // Importante: AppNavigation ahora recibe innerPadding para no quedar debajo de las barras
+        AppNavigation(
+            navController = navController,
+            snackbarHostState = snackbarHostState,
+            paddingValues = innerPadding
+        )
     }
 }
