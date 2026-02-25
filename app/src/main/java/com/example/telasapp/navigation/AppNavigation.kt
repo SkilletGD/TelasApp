@@ -10,6 +10,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.telasapp.features.auth.ui.LoginScreen
+import com.example.telasapp.features.auth.viewmodel.AuthViewModel
 import com.example.telasapp.features.cart.ui.CartScreen
 import com.example.telasapp.features.cart.viewmodel.CartViewModel
 import com.example.telasapp.features.detail.ui.DetailScreen
@@ -32,7 +34,8 @@ import com.example.telasapp.features.splash.SplashScreen
 fun AppNavigation(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState,
-    paddingValues: PaddingValues // <-- NUEVO: Recibe el padding del Scaffold
+    paddingValues: PaddingValues, // <-- NUEVO: Recibe el padding del Scaffold
+    authVm: AuthViewModel
 ) {
     // ESTA es la única instancia que debe existir
     val sharedCartVm: CartViewModel = viewModel()
@@ -43,6 +46,13 @@ fun AppNavigation(
         modifier = Modifier.padding(paddingValues) // <-- APLICA EL PADDING AQUÍ
     ) {
 
+        // --- AUTH ---
+        // 2. LOGIN
+        composable(Screen.Login.route) {
+            LoginScreen(vm = authVm, navController = navController)
+        }
+
+        // 1. SPLASH
         composable(Screen.Splash.route) {
             SplashScreen(navController)
         }

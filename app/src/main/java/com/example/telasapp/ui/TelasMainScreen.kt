@@ -1,49 +1,56 @@
 package com.example.telasapp.ui
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.telasapp.core.components.BottomNavigationBar // IMPORTA TU BARRA
+import com.example.telasapp.core.components.BottomNavigationBar
+import com.example.telasapp.features.auth.viewmodel.AuthViewModel
+import com.example.telasapp.features.auth.viewmodel.AuthState
+import com.example.telasapp.data.models.UserRole
 import com.example.telasapp.navigation.AppNavigation
-import com.example.telasapp.navigation.Screen // IMPORTA TUS RUTAS
+import com.example.telasapp.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TelasMainScreen() {
-
+fun TelasMainScreen(
+    authVm: AuthViewModel = viewModel()
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Definimos qué pantallas son las "principales" (donde se verá la BottomBar)
+    // Observamos el estado para los bloqueos de Admin
+    val authState by authVm.authState.collectAsState()
+    val userRole = (authState as? AuthState.Success)?.user?.role
+    val isAdmin = userRole == UserRole.ADMIN
+
+    // Definimos pantallas que NO tienen barras (Splash y Login)
+    val noBarsScreens = listOf(Screen.Splash.route, Screen.Login.route)
+    val isAuthFlow = currentRoute in noBarsScreens
+
     val rootScreens = listOf(
         Screen.Inventario.route,
         Screen.Carrito.route,
         Screen.Perfil.route
     )
 
-    // 1. Nueva validación para el Splash
-    val isSplashScreen = currentRoute == "splash"
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            // Modificamos la condición: NO mostrar si es Scanner O si es Splash
-            if (currentRoute != Screen.Scanner.route && !isSplashScreen) {
+            // No mostrar si es Splash, Login o Scanner
+            if (!isAuthFlow && currentRoute != Screen.Scanner.route) {
                 TopAppBar(
                     title = {
                         Text(when {
@@ -68,8 +75,10 @@ fun TelasMainScreen() {
                             IconButton(onClick = { navController.navigate(Screen.Scanner.route) }) {
                                 Icon(Icons.Default.QrCodeScanner, "Escanear QR")
                             }
-                            IconButton(onClick = { navController.navigate("reporteVentas") }) {
-                                Text("📊", style = MaterialTheme.typography.bodyLarge)
+                            if (isAdmin) {
+                                IconButton(onClick = { navController.navigate("reporteVentas") }) {
+                                    Text("📊", style = MaterialTheme.typography.bodyLarge)
+                                }
                             }
                         }
                     },
@@ -80,28 +89,25 @@ fun TelasMainScreen() {
                 )
             }
         },
-        // --- AQUÍ APLICAMOS LA BOTTOM BAR ---
         bottomBar = {
-            // Si es splash, la condición `in rootScreens` ya lo oculta automáticamente,
-            // pero lo dejamos claro por seguridad
-            if (currentRoute in rootScreens && !isSplashScreen) {
+            if (!isAuthFlow && currentRoute in rootScreens) {
                 BottomNavigationBar(navController)
             }
         },
         floatingActionButton = {
-            if (currentRoute == Screen.Inventario.route && !isSplashScreen) {
+            if (currentRoute == Screen.Inventario.route && isAdmin) {
                 FloatingActionButton(onClick = { navController.navigate(Screen.Registro.route) }) {
                     Icon(Icons.Default.Add, "Agregar rollo")
                 }
             }
         }
     ) { innerPadding ->
-        // Importante: AppNavigation ahora recibe innerPadding para no quedar debajo de las barras
-        // 2. Aquí está el truco: si es splash, pasamos 0 dp de padding
         AppNavigation(
             navController = navController,
             snackbarHostState = snackbarHostState,
-            paddingValues = if (isSplashScreen) PaddingValues(0.dp) else innerPadding
+            // Si es Splash o Login, usamos 0 padding para que sea pantalla completa
+            paddingValues = if (isAuthFlow) PaddingValues(0.dp) else innerPadding,
+            authVm = authVm
         )
     }
 }

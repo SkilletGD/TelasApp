@@ -23,4 +23,7 @@ sealed class Screen(val route: String, val title: String? = null, val icon: Imag
     object Scanner : Screen("scanner")
 
     object ReporteVentas : Screen("reporteVentas")
+
+    // NUEVO: Ruta de Login
+    object Login : Screen("login")
 }
