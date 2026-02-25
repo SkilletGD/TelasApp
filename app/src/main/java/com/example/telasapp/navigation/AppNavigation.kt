@@ -110,5 +110,12 @@ fun AppNavigation(
                 invVm = invVm
             )
         }
+        composable(Screen.Perfil.route) {
+            // Importamos la pantalla que acabamos de crear
+            com.example.telasapp.features.user.ui.ProfileScreen(
+                navController = navController,
+                authVm = authVm // Usamos el ViewModel que ya estamos pasando por parámetro
+            )
+        }
     }
 }
