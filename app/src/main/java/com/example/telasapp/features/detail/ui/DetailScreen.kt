@@ -14,6 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.telasapp.data.models.UserRole
+import com.example.telasapp.features.auth.viewmodel.AuthState
+import com.example.telasapp.features.auth.viewmodel.AuthViewModel
 import com.example.telasapp.features.detail.ui.components.* // Importamos los componentes
 import com.example.telasapp.features.detail.viewmodel.DetailViewModel
 import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
@@ -24,11 +27,16 @@ fun DetailScreen(
     rolloId: Int?,
     detailVm: DetailViewModel,
     invVm: InventarioViewModel,
+    authVm: AuthViewModel,
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
     val rolloOriginal by detailVm.rollo.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // 2. Verificamos si es ADMIN
+    val authState by authVm.authState.collectAsState()
+    val isAdmin = (authState as? AuthState.Success)?.user?.role == UserRole.ADMIN
 
     var tipoTela by remember(rolloOriginal) { mutableStateOf(rolloOriginal?.tipo_tela ?: "") }
     var color by remember(rolloOriginal) { mutableStateOf(rolloOriginal?.color ?: "") }
@@ -48,9 +56,13 @@ fun DetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             RolloForm(
-                tipoTela = tipoTela, onTipoTelaChange = { tipoTela = it },
-                color = color, onColorChange = { color = it },
-                codigo = codigo, onCodigoChange = { codigo = it }
+                tipoTela = tipoTela,
+                onTipoTelaChange = { tipoTela = it },
+                color = color,
+                onColorChange = { color = it },
+                codigo = codigo,
+                onCodigoChange = { codigo = it },
+                enabled = isAdmin
             )
 
             ShareActionsRow(
@@ -61,7 +73,10 @@ fun DetailScreen(
             Spacer(Modifier.weight(1f))
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                IconButton(onClick = { showDeleteDialog = true }) {
+                IconButton(
+                    onClick = { showDeleteDialog = true },
+                    enabled = isAdmin
+                ) {
                     Icon(Icons.Default.Delete, "Borrar", tint = Color.Red)
                 }
                 Button(
@@ -72,6 +87,7 @@ fun DetailScreen(
                             navController.popBackStack()
                         }
                     },
+                    enabled = isAdmin,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Save, null); Spacer(Modifier.width(8.dp)); Text("Guardar")

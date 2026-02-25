@@ -91,7 +91,7 @@ fun AppNavigation(
             val invVm: InventarioViewModel = viewModel()
             val detailVm: DetailViewModel = viewModel()
             val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()
-            DetailScreen(navController, rolloId, detailVm, invVm, snackbarHostState)
+            DetailScreen(navController, rolloId, detailVm, invVm, authVm, snackbarHostState)
         }
 
         composable("reporteVentas") {
