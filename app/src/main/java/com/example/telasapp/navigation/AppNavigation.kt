@@ -22,6 +22,7 @@ import com.example.telasapp.features.sales.ui.VentaScreen
 import com.example.telasapp.features.sales.ui.ReporteVentasScreen
 import com.example.telasapp.features.sales.viewmodel.SalesViewModel
 import com.example.telasapp.features.scanner.ui.ScannerScreen
+import com.example.telasapp.features.splash.SplashScreen
 
 // Importa tus futuras pantallas (puedes crearlas vacías por ahora para que no de error)
 // import com.example.telasapp.features.cart.ui.CartScreen
@@ -38,9 +39,13 @@ fun AppNavigation(
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Inventario.route,
+        startDestination = Screen.Splash.route,
         modifier = Modifier.padding(paddingValues) // <-- APLICA EL PADDING AQUÍ
     ) {
+
+        composable(Screen.Splash.route) {
+            SplashScreen(navController)
+        }
         // --- PANTALLAS PRINCIPALES (Bottom Bar) ---
 
         composable(Screen.Inventario.route) {
@@ -79,7 +84,7 @@ fun AppNavigation(
             DetailScreen(navController, rolloId, detailVm, invVm, snackbarHostState)
         }
 
-        composable("reporteVentas") { // Puedes dejarla así o subirla a Screen.kt
+        composable("reporteVentas") {
             val salesVm: SalesViewModel = viewModel()
             ReporteVentasScreen(vm = salesVm)
         }
@@ -90,7 +95,7 @@ fun AppNavigation(
 
             CartScreen(
                 navController = navController,
-                cartVm = sharedCartVm, // USAR LA INSTANCIA COMPARTIDA
+                cartVm = sharedCartVm,
                 salesVm = salesVm,
                 invVm = invVm
             )

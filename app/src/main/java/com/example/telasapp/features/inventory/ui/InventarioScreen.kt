@@ -15,6 +15,7 @@ import androidx.navigation.NavController
 import com.example.telasapp.features.inventory.ui.components.ErrorCard
 import com.example.telasapp.features.inventory.ui.components.FilterPanel
 import com.example.telasapp.features.inventory.ui.components.RolloItem
+import com.example.telasapp.features.inventory.ui.components.RolloItemPlaceholder
 import com.example.telasapp.features.inventory.ui.components.SearchBar
 import com.example.telasapp.features.inventory.ui.components.SearchSuggestions
 import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
@@ -92,12 +93,20 @@ fun InventarioScreen(
             )
         }
 
-        // Listado y estados
         Box(modifier = Modifier.fillMaxSize()) {
             if (errorMessage != null) {
                 ErrorCard(message = errorMessage!!, onRetry = { vm.cargarRollos() })
             } else if (isLoading && rollos.isEmpty()) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
+                // --- EFECTO SHIMMER ---
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
+                ) {
+                    items(6) { // Mostramos 6 tarjetas de carga
+                        RolloItemPlaceholder()
+                    }
+                }
             } else if (filteredRollos.isEmpty()) {
                 Text("No hay resultados", Modifier.align(Alignment.Center), color = Color.Gray)
             } else {
