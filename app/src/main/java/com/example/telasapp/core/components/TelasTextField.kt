@@ -14,9 +14,10 @@ fun TelasTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    error: String? = null, // Por defecto es null
-    keyboardType: KeyboardType = KeyboardType.Text, // Por defecto texto normal
-    prefix: @Composable (() -> Unit)? = null, // Opcional (para el "m" de metros)
+    error: String? = null,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    prefix: @Composable (() -> Unit)? = null,
+    enabled: Boolean = true, // <--- AGREGAMOS ESTO
     modifier: Modifier = Modifier.fillMaxWidth()
 ) {
     OutlinedTextField(
@@ -24,6 +25,7 @@ fun TelasTextField(
         onValueChange = onValueChange,
         label = { Text(label) },
         modifier = modifier,
+        enabled = enabled, // <--- LO PASAMOS AL TEXTFIELD INTERNO
         isError = error != null,
         supportingText = {
             if (error != null) {

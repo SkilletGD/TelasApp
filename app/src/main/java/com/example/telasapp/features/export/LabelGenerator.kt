@@ -9,9 +9,10 @@ import com.google.zxing.qrcode.QRCodeWriter
 import java.io.File
 import java.io.FileOutputStream
 
+// ... (mismos imports)
+
 class LabelGenerator(private val context: Context) {
 
-    // 10cm x 15cm (Vertical) en puntos de impresión (72 dpi)
     private val width = 283
     private val height = 425
 
@@ -24,7 +25,8 @@ class LabelGenerator(private val context: Context) {
         dibujarContenidoIndustrial(canvas, rollo)
 
         pdfDocument.finishPage(page)
-        val file = File(context.cacheDir, "Etiqueta_${rollo.codigo}.pdf")
+        // Usamos el código del lote para el nombre del archivo
+        val file = File(context.cacheDir, "Lote_${rollo.codigo}.pdf")
         pdfDocument.writeTo(FileOutputStream(file))
         pdfDocument.close()
         return file
@@ -32,62 +34,67 @@ class LabelGenerator(private val context: Context) {
 
     private fun dibujarContenidoIndustrial(canvas: Canvas, rollo: Rollo) {
         val paint = Paint()
-
-        // Fondo Blanco (Estándar de etiqueta)
         canvas.drawColor(Color.WHITE)
-
-        // Configuración de Texto Negro
         paint.color = Color.BLACK
         paint.isAntiAlias = true
 
-        // 1. Encabezado "PREMIUM" (Pequeño arriba)
-        paint.textSize = 12f
+        // 1. Encabezado
+        paint.textSize = 10f
         paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-        canvas.drawText("PREMIUM QUALITY", 20f, 40f, paint)
+        canvas.drawText("SISTEMA DE INVENTARIO - TEXTILES", 20f, 30f, paint)
 
-        // 2. ITEM / NOMBRE DE LA TELA (Grande y Negrita)
-        paint.textSize = 28f
+        // 2. ITEM / NOMBRE DE LA TELA
+        paint.textSize = 24f
         paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-        // Usamos el nombre y color de tu base de datos
-        val nombreTela = "${rollo.tipo_tela} ${rollo.color}".uppercase()
-        canvas.drawText(nombreTela, 20f, 100f, paint)
+        val nombreTela = "${rollo.tipo_tela}".uppercase()
+        canvas.drawText(nombreTela, 20f, 70f, paint)
 
-        // Línea divisora
-        paint.strokeWidth = 2f
-        canvas.drawLine(20f, 120f, (width - 20).toFloat(), 120f, paint)
+        paint.textSize = 18f
+        canvas.drawText("COLOR: ${rollo.color ?: "N/A"}", 20f, 95f, paint)
 
-        // 3. CODE y LENGTH (Datos dinámicos)
+        canvas.drawLine(20f, 110f, (width - 20).toFloat(), 110f, paint)
+
+        // 3. DATOS DEL LOTE (Nuevos campos)
         paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-        paint.textSize = 18f
-        canvas.drawText("CODE: ${rollo.codigo}", 20f, 160f, paint)
-        canvas.drawText("LENGTH: ${rollo.cantidad_total} m", 20f, 190f, paint)
+        paint.textSize = 16f
+        canvas.drawText("LOTE: ${rollo.codigo}", 20f, 140f, paint)
 
-        // 4. ROLL NO y LOTE (Grande al centro/abajo)
-        paint.textSize = 18f
-        canvas.drawText("ROLL NO: ${rollo.id}", 20f, 260f, paint)
+        // Usamos metros_reales_restantes en lugar de cantidad_total
+        val stockActual = rollo.metros_reales_restantes ?: 0.0
+        canvas.drawText("STOCK TOTAL: $stockActual m", 20f, 170f, paint)
 
-        paint.textSize = 55f
+        // Cantidad de rollos físicos en el lote
+        val cantRollos = rollo.rollos_disponibles ?: 0
+        canvas.drawText("ROLLOS ACTIVOS: $cantRollos", 20f, 195f, paint)
+
+        // 4. IDENTIFICADOR GRANDE (ID del Lote)
+        paint.textSize = 14f
+        canvas.drawText("ID SISTEMA:", 20f, 250f, paint)
+        paint.textSize = 60f
         paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-        // El ID del rollo como número de lote/identificador grande
-        canvas.drawText("${rollo.id}", 20f, 320f, paint)
+        canvas.drawText("${rollo.id}", 20f, 310f, paint)
 
-        // 5. CÓDIGO QR (Resumen de datos)
-        val qrSize = 100 // aprox 3.5cm
+        // 5. CÓDIGO QR (Actualizado con datos reales)
+        val qrSize = 110
         val qrBitmap = generarBitmapQR(rollo, qrSize)
         qrBitmap?.let {
-            // Posicionado en la esquina inferior derecha
             canvas.drawBitmap(it, (width - qrSize - 20).toFloat(), (height - qrSize - 20).toFloat(), null)
         }
+
+        // Pie de página pequeño
+        paint.textSize = 8f
+        paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.ITALIC)
+        canvas.drawText("Generado el: ${rollo.fecha_compra ?: ""}", 20f, 410f, paint)
     }
 
     private fun generarBitmapQR(rollo: Rollo, size: Int): Bitmap? {
-        // El QR contiene el resumen que pediste
+        // El QR ahora incluye información del Lote y stock actual
         val content = """
-            ID: ${rollo.id}
-            TEL: ${rollo.tipo_tela}
-            COL: ${rollo.color}
-            COD: ${rollo.codigo}
-            MET: ${rollo.cantidad_total}
+            LOTE ID: ${rollo.id}
+            TELA: ${rollo.tipo_tela}
+            METROS: ${rollo.metros_reales_restantes ?: 0.0}
+            ROLLOS: ${rollo.rollos_disponibles ?: 0}
+            PRECIO: $${rollo.precio}
         """.trimIndent()
 
         return try {

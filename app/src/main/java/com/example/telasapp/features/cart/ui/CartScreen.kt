@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.telasapp.core.components.EmptyState
@@ -24,53 +25,57 @@ fun CartScreen(
     invVm: InventarioViewModel
 ) {
     val items by cartVm.items.collectAsState()
+    // OBSERVAMOS el total de metros calculado en el ViewModel
+    val totalMetros by cartVm.totalMetros.collectAsState()
     val isLoading by salesVm.isLoading.collectAsState()
 
-    // Usamos una Column simple en lugar de un Scaffold interno
     Column(modifier = Modifier.fillMaxSize()) {
 
-        // 1. Indicador de carga (si se está procesando la venta masiva)
         if (isLoading) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary
+            )
         }
 
-        // 2. Contenido principal (Lista o Estado Vacío)
         Box(modifier = Modifier.weight(1f)) {
             if (items.isEmpty()) {
                 EmptyState(
                     icon = "🛒",
                     title = "Carrito vacío",
-                    description = "Agrega rollos desde la pantalla de venta.",
+                    description = "Agrega cortes de tela desde la pantalla de venta.",
                     onAction = { navController.navigate(Screen.Inventario.route) },
                     actionLabel = "Explorar Inventario"
                 )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp)
+                    contentPadding = PaddingValues(bottom = 100.dp) // Un poco más de espacio para el summary
                 ) {
                     item {
                         Text(
-                            "Productos en preventa",
+                            "Resumen del Pedido",
                             modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.secondary
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                    items(items) { item ->
+                    items(items, key = { it.id }) { item ->
                         CartItemCard(
                             item = item,
-                            onRemove = { cartVm.eliminar(item) }
+                            onRemove = { if (!isLoading) cartVm.eliminar(item) }
                         )
                     }
                 }
             }
         }
 
-        // 3. Resumen de compra (Se queda pegado abajo, arriba de la BottomBar general)
         if (items.isNotEmpty()) {
             CartBottomSummary(
                 itemCount = items.size,
+                // CAMBIO AQUÍ: Usamos la variable totalMetros que viene del ViewModel
+                totalMetros = totalMetros,
+                isLoading = isLoading,
                 onCheckout = {
                     salesVm.registrarVentaMasiva(
                         items = items,

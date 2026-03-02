@@ -23,18 +23,20 @@ fun NuevoRolloScreen(
     invVm: InventarioViewModel,
     snackbarHostState: SnackbarHostState
 ) {
-    // 1. Estados de datos (Single Source of Truth en la UI)
     var tipoTela by remember { mutableStateOf("") }
     var color by remember { mutableStateOf("") }
     var codigo by remember { mutableStateOf("") }
-    var cantidad by remember { mutableStateOf("") }
+
+    // NUEVOS CAMPOS PARA EL LOTE
+    var metrosPorRollo by remember { mutableStateOf("") }
+    var cantidadRollos by remember { mutableStateOf("") }
+    var precio by remember { mutableStateOf("") }
+
     var proveedor by remember { mutableStateOf("") }
     var fechaCompra by remember { mutableStateOf("") }
 
-    // 2. Estado de errores centralizado
     var errores by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
-    // 3. Suscripción a eventos del ViewModel
     LaunchedEffect(Unit) {
         regVm.eventos.collect { snackbarHostState.showSnackbar(it) }
     }
@@ -47,12 +49,11 @@ fun NuevoRolloScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Datos del Rollo",
+            text = "Registro de Nuevo Lote",
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.primary
         )
 
-        // Usando nuestro componente modular CORE
         TelasTextField(
             value = tipoTela,
             onValueChange = { tipoTela = it },
@@ -60,60 +61,90 @@ fun NuevoRolloScreen(
             error = errores["tipoTela"]
         )
 
-        TelasTextField(
-            value = color,
-            onValueChange = { color = it },
-            label = "Color *",
-            error = errores["color"]
-        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.weight(1f)) {
+                TelasTextField(
+                    value = color,
+                    onValueChange = { color = it },
+                    label = "Color *",
+                    error = errores["color"]
+                )
+            }
+            Box(Modifier.weight(1f)) {
+                TelasTextField(
+                    value = codigo,
+                    onValueChange = { codigo = it },
+                    label = "Código Lote *",
+                    error = errores["codigo"]
+                )
+            }
+        }
+
+        // --- SECCIÓN DE MEDIDAS DEL LOTE ---
+        Text("Configuración del Lote", style = MaterialTheme.typography.labelLarge)
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.weight(1f)) {
+                TelasTextField(
+                    value = metrosPorRollo,
+                    onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*\$"))) metrosPorRollo = it },
+                    label = "Metros c/u *",
+                    keyboardType = KeyboardType.Decimal,
+                    error = errores["metrosPorRollo"]
+                )
+            }
+            Box(Modifier.weight(1f)) {
+                TelasTextField(
+                    value = cantidadRollos,
+                    onValueChange = { if (it.isEmpty() || it.all { char -> char.isDigit() }) cantidadRollos = it },
+                    label = "Cant. Rollos *",
+                    keyboardType = KeyboardType.Number,
+                    error = errores["cantidadRollos"]
+                )
+            }
+        }
 
         TelasTextField(
-            value = codigo,
-            onValueChange = { codigo = it },
-            label = "Código de Rollo *",
-            error = errores["codigo"]
-        )
-
-        TelasTextField(
-            value = cantidad,
-            onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*\$"))) cantidad = it },
-            label = "Cantidad Inicial (m) *",
-            error = errores["cantidad"],
+            value = precio,
+            onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*\$"))) precio = it },
+            label = "Precio por Metro *",
             keyboardType = KeyboardType.Decimal,
-            prefix = { Text("m ") }
+            prefix = { Text("$ ") },
+            error = errores["precio"]
         )
 
-        // Campo opcional (no necesita validación de error obligatoria)
         TelasTextField(
             value = proveedor,
             onValueChange = { proveedor = it },
             label = "Proveedor (Opcional)"
         )
 
-        // Componente modular de FECHA
         DatePickerField(fechaCompra) { fechaCompra = it }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Botón de acción
         Button(
             onClick = {
-                val validacion = RegistrationValidator.validarFormulario(tipoTela, color, codigo, cantidad)
+                // NOTA: Deberás actualizar tu RegistrationValidator para estos nuevos campos
+                val validacion = RegistrationValidator.validarLote(
+                    tipoTela, color, codigo, metrosPorRollo, cantidadRollos, precio, fechaCompra
+                )
                 errores = validacion
 
                 if (validacion.isEmpty()) {
-                    val nuevoRollo = Rollo(
+                    val nuevoLote = Rollo(
                         tipo_tela = tipoTela.trim(),
                         color = color.trim(),
                         codigo = codigo.trim(),
-                        cantidad_total = cantidad,
-                        cantidad_restante = cantidad,
+                        metros_por_rollo = metrosPorRollo.toDouble(),
+                        cantidad_rollos = cantidadRollos.toInt(),
+                        precio = precio.toDouble(),
                         proveedor = proveedor.trim().takeIf { it.isNotBlank() },
                         fecha_compra = fechaCompra,
-                        registrado_por = "Admin"
+                        registrado_por = "Admin" // Aquí podrías usar el nombre del usuario logueado
                     )
 
-                    regVm.agregarRollo(nuevoRollo) {
+                    regVm.agregarRollo(nuevoLote) {
                         invVm.cargarRollos()
                         navController.popBackStack()
                     }
@@ -121,7 +152,7 @@ fun NuevoRolloScreen(
             },
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Text("Guardar Rollo")
+            Text("Crear Lote de Rollos")
         }
     }
 }

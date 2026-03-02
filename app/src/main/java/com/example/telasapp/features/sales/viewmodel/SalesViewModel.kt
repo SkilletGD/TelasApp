@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 
 class SalesViewModel : ViewModel() {
 
-
     private val _rolloActual = MutableStateFlow<Rollo?>(null)
     val rolloActual: StateFlow<Rollo?> = _rolloActual
 
@@ -27,17 +26,20 @@ class SalesViewModel : ViewModel() {
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
-    // Canal para mensajes (Snackbars)
     private val _eventos = MutableSharedFlow<String>()
     val eventos = _eventos.asSharedFlow()
 
     fun cargarRolloParaVenta(id: Int) {
         viewModelScope.launch {
+            _isLoading.value = true // Agregamos loading aquí también
             try {
                 val resultado = ApiService.obtenerRolloPorId(id)
                 _rolloActual.value = resultado
+                _errorMessage.value = null
             } catch (e: Exception) {
-                _eventos.emit("❌ Error al obtener datos del rollo")
+                _errorMessage.value = "Error al obtener datos del lote"
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -45,10 +47,11 @@ class SalesViewModel : ViewModel() {
     fun cargarVentas() {
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null // Limpiamos error previo al reintentar
             try {
                 _ventas.value = ApiService.obtenerVentas()
             } catch (e: Exception) {
-                _errorMessage.value = "Error al cargar ventas: ${e.message}"
+                _errorMessage.value = "Error al cargar historial: ${e.localizedMessage}"
             } finally {
                 _isLoading.value = false
             }
@@ -59,7 +62,13 @@ class SalesViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val venta = Venta(rollo_id = rolloId, cantidad_vendida = metros, vendedor = vendedor, cliente = cliente)
+                // --- CORRECCIÓN CLAVE: Usamos metros_vendidos ---
+                val venta = Venta(
+                    rollo_id = rolloId,
+                    metros_vendidos = metros,
+                    vendedor = vendedor,
+                    cliente = cliente
+                )
                 ApiService.registrarVenta(venta)
                 _eventos.emit("✅ Venta registrada correctamente")
                 onSuccess()
@@ -71,18 +80,15 @@ class SalesViewModel : ViewModel() {
         }
     }
 
-    /**
-     * NUEVA FUNCIÓN: Registro masivo para el carrito
-     */
     fun registrarVentaMasiva(items: List<CartItem>, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Iteramos sobre los items del carrito y registramos cada uno
                 items.forEach { item ->
+                    // --- CORRECCIÓN CLAVE: Usamos metros_vendidos ---
                     val venta = Venta(
                         rollo_id = item.rolloId,
-                        cantidad_vendida = item.metros,
+                        metros_vendidos = item.metros,
                         vendedor = item.vendedor,
                         cliente = item.cliente
                     )

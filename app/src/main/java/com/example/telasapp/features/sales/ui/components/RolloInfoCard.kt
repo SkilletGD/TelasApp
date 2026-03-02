@@ -25,20 +25,35 @@ fun RolloInfoCard(rollo: Rollo) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "${rollo.tipo_tela} - ${rollo.color}",
+                text = "${rollo.tipo_tela} - ${rollo.color ?: "Sin color"}",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            Text("Código: ${rollo.codigo}", style = MaterialTheme.typography.bodyMedium)
+            Text("Lote: ${rollo.codigo}", style = MaterialTheme.typography.bodyMedium)
+
             Spacer(modifier = Modifier.height(8.dp))
+
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Metros disponibles: ", style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    text = "${rollo.cantidad_restante}m",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Stock Total en Lote:", style = MaterialTheme.typography.labelSmall)
+                    // CAMBIO: Usamos metros_reales_restantes
+                    Text(
+                        text = "${rollo.metros_reales_restantes ?: 0.0} m",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Rollos activos:", style = MaterialTheme.typography.labelSmall)
+                    // CAMBIO: Usamos rollos_disponibles
+                    Text(
+                        text = "${rollo.rollos_disponibles ?: 0}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

@@ -7,13 +7,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.telasapp.core.components.EmptyState // Importamos el genérico
 import com.example.telasapp.features.inventory.ui.components.ErrorCard
+import com.example.telasapp.features.sales.ui.components.ErrorCardSales
 import com.example.telasapp.features.sales.ui.components.SalesSummaryCard
 import com.example.telasapp.features.sales.ui.components.VentaItem
 import com.example.telasapp.features.sales.viewmodel.SalesViewModel
 
+@OptIn(ExperimentalMaterial3Api::class) // Para PullToRefresh
 @Composable
 fun ReporteVentasScreen(vm: SalesViewModel) {
     val ventas by vm.ventas.collectAsState()
@@ -23,51 +26,76 @@ fun ReporteVentasScreen(vm: SalesViewModel) {
     // Carga inicial
     LaunchedEffect(Unit) { vm.cargarVentas() }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // 1. Manejo de Errores
-        errorMessage?.let {
-            ErrorCard(message = it, onRetry = { vm.cargarVentas() })
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Reporte de Ventas", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            )
         }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // 1. Manejo de Errores (Mejorado)
+            errorMessage?.let {
+                ErrorCardSales(
+                    message = it,
+                    onRetry = { vm.cargarVentas() },
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
 
-        // 2. Resumen (Solo si hay ventas)
-        if (ventas.isNotEmpty()) {
-            SalesSummaryCard(ventas = ventas)
-        }
+            // 2. Resumen General (Muestra datos acumulados)
+            if (ventas.isNotEmpty()) {
+                SalesSummaryCard(ventas = ventas)
+            }
 
-        // 3. Área de contenido dinámico
-        Box(modifier = Modifier.fillMaxSize()) {
-            when {
-                isLoading && ventas.isEmpty() -> {
+            // 3. Contenido Principal
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isLoading && ventas.isEmpty()) {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
-                }
-
-                ventas.isEmpty() && !isLoading -> {
-                    // Usamos el componente genérico en lugar de la función local
+                } else if (ventas.isEmpty() && !isLoading) {
                     EmptyState(
-                        icon = "📈",
-                        title = "No hay ventas registradas",
-                        description = "Las ventas realizadas aparecerán en este historial.",
+                        icon = "📊", // Icono de gráfica para reportes
+                        title = "Sin ventas aún",
+                        description = "Aquí aparecerá el historial de lo que se corte de los lotes.",
                         onAction = { vm.cargarVentas() },
-                        actionLabel = "Actualizar"
+                        actionLabel = "Reintentar"
                     )
-                }
-
-                else -> {
+                } else {
+                    // Lista de ventas con separador de sección
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         item {
-                            Text(
-                                "Historial Reciente",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.secondary
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "Movimientos Recientes",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                // Badge que indica el total de ítems
+                                Badge { Text("${ventas.size}") }
+                            }
                         }
+
                         items(ventas) { venta ->
                             VentaItem(venta = venta)
                         }
+
+                        // Espacio extra al final para que el último item no quede tapado
+                        item { Spacer(modifier = Modifier.height(50.dp)) }
                     }
                 }
             }

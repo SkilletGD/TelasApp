@@ -35,34 +35,65 @@ fun VentaScreen(
     var vendedor by remember { mutableStateOf("") }
     var cliente by remember { mutableStateOf("") }
 
-    val rollo by salesVm.rolloActual.collectAsState()
+    // NUEVO: Estado para el rollo físico seleccionado dentro del lote
+    var rolloSeleccionadoId by remember { mutableStateOf<Int?>(null) }
+    var metrosDisponiblesEnRollo by remember { mutableStateOf(0.0) }
+
+    val lote by salesVm.rolloActual.collectAsState() // "rollo" ahora es el Lote completo
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(rolloId) {
         rolloId?.let { salesVm.cargarRolloParaVenta(it) }
     }
 
-    if (rollo == null) {
+    if (lote == null) {
         Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
     } else {
-        val r = rollo!!
+        val l = lote!!
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Componente extraído
-            RolloInfoCard(rollo = r)
+            RolloInfoCard(rollo = l)
 
-            Text("Detalles de la venta", style = MaterialTheme.typography.labelLarge)
+            // --- NUEVA SECCIÓN: SELECCIÓN DE ROLLO FÍSICO ---
+            Text("Seleccione el rollo físico del cual cortará:", style = MaterialTheme.typography.labelLarge)
 
-            // 2. Usando tu componente modular compartido
+            l.detalles_rollos?.filter { it.estado != "Agotado" }?.forEach { detalle ->
+                FilterChip(
+                    selected = rolloSeleccionadoId == detalle.id,
+                    onClick = {
+                        rolloSeleccionadoId = detalle.id
+                        metrosDisponiblesEnRollo = detalle.metros_restantes
+                    },
+                    label = { Text("Rollo #${detalle.numero_rollo} (${detalle.metros_restantes}m)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            if (rolloSeleccionadoId == null) {
+                Text("⚠️ Debe seleccionar un rollo antes de continuar", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+
+            // --- ENTRADA DE METROS ---
             TelasTextField(
                 value = metrosVendidos,
                 onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) metrosVendidos = it },
                 label = "Metros a vender *",
                 prefix = { Text("m ") },
+                enabled = rolloSeleccionadoId != null,
                 keyboardType = KeyboardType.Decimal
             )
+
+            // Botón rápido para vender el rollo seleccionado completo
+            if (rolloSeleccionadoId != null) {
+                OutlinedButton(
+                    onClick = { metrosVendidos = metrosDisponiblesEnRollo.toString() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("VENDER TODO ESTE ROLLO ($metrosDisponiblesEnRollo m)")
+                }
+            }
 
             TelasTextField(
                 value = vendedor,
@@ -76,72 +107,42 @@ fun VentaScreen(
                 label = "Cliente (opcional)"
             )
 
-            if (r.estado == "Disponible") {
-                OutlinedButton(
-                    onClick = { metrosVendidos = r.cantidad_restante.toString() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("VENDER TODO EL ROLLO (${r.cantidad_restante}m)")
-                }
-            }
-
             Spacer(Modifier.weight(1f))
 
-            if (r.estado == "Disponible") {
-                Button(
-                    onClick = {
-                        val cantNum = metrosVendidos.toDoubleOrNull()
-                        val disponibleNum = r.cantidad_restante.toDoubleOrNull() ?: 0.0
-
-                        if (cantNum != null && cantNum > 0 && cantNum <= disponibleNum && vendedor.isNotBlank()) {
-                            cartVm.agregar(
-                                CartItem(
-                                    rolloId = r.id!!,
-                                    tipoTela = r.tipo_tela,
-                                    color = r.color,
-                                    metros = cantNum,
-                                    vendedor = vendedor,
-                                    cliente = cliente.ifBlank { null }
-                                )
-                            )
-                            scope.launch { snackbarHostState.showSnackbar("✅ Agregado al carrito") }
-                        } else {
-                            scope.launch { snackbarHostState.showSnackbar("❌ Revisa los datos") }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                ) {
-                    Text("Agregar al Carrito")
-                }
-            }
-
-            // 3. Botones de acción
+            // --- ACCIONES ---
             VentaActionsRow(
                 onCancel = { navController.popBackStack() },
                 onConfirm = {
                     val cantNum = metrosVendidos.toDoubleOrNull()
-                    val disponibleNum = r.cantidad_restante.toDoubleOrNull() ?: 0.0
 
                     when {
+                        rolloSeleccionadoId == null -> {
+                            scope.launch { snackbarHostState.showSnackbar("❌ Seleccione un rollo físico") }
+                        }
                         metrosVendidos.isBlank() || vendedor.isBlank() -> {
                             scope.launch { snackbarHostState.showSnackbar("❌ Complete campos") }
                         }
                         cantNum == null || cantNum <= 0 -> {
                             scope.launch { snackbarHostState.showSnackbar("❌ Cantidad no válida") }
                         }
-                        cantNum > disponibleNum -> {
-                            scope.launch { snackbarHostState.showSnackbar("❌ Stock insuficiente") }
+                        cantNum > metrosDisponiblesEnRollo -> {
+                            scope.launch { snackbarHostState.showSnackbar("❌ El rollo solo tiene $metrosDisponiblesEnRollo m") }
                         }
                         else -> {
-                            salesVm.registrarVenta(r.id!!, cantNum, vendedor, cliente.ifBlank { null }) {
+                            // IMPORTANTE: Enviamos rolloSeleccionadoId (el ID del rollo físico)
+                            salesVm.registrarVenta(
+                                rolloId = rolloSeleccionadoId!!,
+                                metros = cantNum,
+                                vendedor = vendedor,
+                                cliente = cliente.ifBlank { null }
+                            ) {
                                 invVm.cargarRollos()
                                 navController.popBackStack()
                             }
                         }
                     }
                 },
-                enabled = r.estado == "Disponible"
+                enabled = l.estado == "Disponible"
             )
         }
     }

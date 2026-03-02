@@ -19,7 +19,10 @@ import com.example.telasapp.features.inventory.ui.components.RolloItemPlaceholde
 import com.example.telasapp.features.inventory.ui.components.SearchBar
 import com.example.telasapp.features.inventory.ui.components.SearchSuggestions
 import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventarioScreen(
     navController: NavController,
@@ -29,6 +32,9 @@ fun InventarioScreen(
     val rollos by vm.rollos.collectAsState()
     val isLoading by vm.isLoading.collectAsState()
     val errorMessage by vm.errorMessage.collectAsState()
+
+    // Estado del gesto de arrastrar para refrescar
+    val pullToRefreshState = rememberPullToRefreshState()
 
     // Estados de UI
     var searchQuery by remember { mutableStateOf("") }
@@ -43,16 +49,22 @@ fun InventarioScreen(
     }
     LaunchedEffect(Unit) { vm.cargarRollos() }
 
-    // --- FILTRADO (Separado visualmente del diseño) ---
+    // --- LOGICA DE DATOS ACTUALIZADA ---
     val filteredRollos = remember(rollos, searchQuery, selectedEstado, minMetros, maxMetros) {
         rollos.filter { r ->
-            val matchesSearch = searchQuery.isBlank() || listOf(r.tipo_tela, r.color, r.codigo).any {
+            // 1. Buscamos por tipo, color o código
+            val matchesSearch = searchQuery.isBlank() || listOf(r.tipo_tela, r.color ?: "", r.codigo).any {
                 it.contains(searchQuery, ignoreCase = true)
             }
+
+            // 2. Filtro de estado
             val matchesEstado = selectedEstado == null || r.estado == selectedEstado
-            val actual = r.cantidad_restante.toDoubleOrNull() ?: 0.0
-            val inRange = actual >= (minMetros.toDoubleOrNull() ?: 0.0) &&
-                    actual <= (maxMetros.toDoubleOrNull() ?: Double.MAX_VALUE)
+
+            // 3. Filtro de metros (Usando el nuevo campo metros_reales_restantes)
+            val actual = r.metros_reales_restantes ?: 0.0
+            val min = minMetros.toDoubleOrNull() ?: 0.0
+            val max = maxMetros.toDoubleOrNull() ?: Double.MAX_VALUE
+            val inRange = actual >= min && actual <= max
 
             matchesSearch && matchesEstado && inRange
         }
@@ -60,11 +72,16 @@ fun InventarioScreen(
 
     val suggestions = remember(rollos, searchQuery) {
         if (searchQuery.length >= 2) {
-            rollos.flatMap { listOf(it.tipo_tela, it.color, it.codigo) }
+            rollos.flatMap {
+                // Usamos listOfNotNull para omitir automáticamente los campos que sean null
+                listOfNotNull(it.tipo_tela, it.color, it.codigo)
+            }
                 .distinct()
                 .filter { it.contains(searchQuery, ignoreCase = true) }
                 .take(5)
-        } else emptyList()
+        } else {
+            emptyList()
+        }
     }
 
     // --- DISEÑO ---
@@ -76,51 +93,40 @@ fun InventarioScreen(
             onFilterToggle = { showFilters = !showFilters }
         )
 
-        SearchSuggestions(suggestions) { searchQuery = it }
-
-        if (showFilters) {
-            FilterPanel(
-                selectedEstado = selectedEstado,
-                onEstadoSelect = { selectedEstado = it },
-                minMetros = minMetros,
-                onMinMetrosChange = { minMetros = it },
-                maxMetros = maxMetros,
-                onMaxMetrosChange = { maxMetros = it },
-                onClear = {
-                    selectedEstado = null; minMetros = ""; maxMetros = ""; searchQuery = ""; showFilters = false
-                },
-                onApply = { showFilters = false }
-            )
-        }
-
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (errorMessage != null) {
-                ErrorCard(message = errorMessage!!, onRetry = { vm.cargarRollos() })
-            } else if (isLoading && rollos.isEmpty()) {
-                // --- EFECTO SHIMMER ---
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
-                ) {
-                    items(6) { // Mostramos 6 tarjetas de carga
-                        RolloItemPlaceholder()
+        // Envolvemos el contenido principal en el PullToRefreshBox
+        PullToRefreshBox(
+            isRefreshing = isLoading, // Se activa la animación mientras el VM carga
+            onRefresh = { vm.cargarRollos() }, // Acción al soltar el arrastre
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (errorMessage != null) {
+                    ErrorCard(message = errorMessage!!, onRetry = { vm.cargarRollos() })
+                } else if (isLoading && rollos.isEmpty()) {
+                    // Solo mostramos placeholders si es la PRIMERA carga (lista vacía)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
+                    ) {
+                        items(6) { RolloItemPlaceholder() }
                     }
-                }
-            } else if (filteredRollos.isEmpty()) {
-                Text("No hay resultados", Modifier.align(Alignment.Center), color = Color.Gray)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
-                ) {
-                    items(filteredRollos) { rollo ->
-                        RolloItem(
-                            rollo = rollo,
-                            onVentaClick = { id -> navController.navigate("venta/$id") },
-                            onDetailClick = { id -> navController.navigate("detalleRollo/$id") }
-                        )
+                } else if (filteredRollos.isEmpty()) {
+                    Text("No hay resultados", Modifier.align(Alignment.Center), color = Color.Gray)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
+                    ) {
+                        items(filteredRollos) { rollo ->
+                            RolloItem(
+                                rollo = rollo,
+                                onVentaClick = { id -> navController.navigate("venta/$id") },
+                                onDetailClick = { id -> navController.navigate("detalleRollo/$id") }
+                            )
+                        }
                     }
                 }
             }

@@ -13,42 +13,62 @@ import com.example.telasapp.data.models.Venta
 @Composable
 fun VentaItem(venta: Venta) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text(text = "Venta #${venta.id ?: "---"}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Text(text = "Rollo ID: ${venta.rollo_id}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                    Text(text = "Venta #${venta.id ?: "---"}", fontWeight = FontWeight.Bold)
+                    Text(text = "Rollo ID: ${venta.rollo_id}", style = MaterialTheme.typography.bodySmall)
                 }
-                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.medium) {
+                    // NUEVO: Mostrar el código del lote si lo tienes en el modelo Venta
+                    // Si no lo tienes, al menos aclara que es el ID del rollo físico
                     Text(
-                        text = "${venta.cantidad_vendida}m",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        text = "ID Rollo Físico: ${venta.rollo_id}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
+
+            // --- CAMBIO AQUÍ: Usamos metros_vendidos ---
+            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.medium) {
+                Text(
+                    text = "${venta.metros_vendidos}m",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
-            Row(modifier = Modifier.fillMaxWidth()) {
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Vendedor", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    Text(venta.vendedor, style = MaterialTheme.typography.bodyMedium)
+                    Text(venta.vendedor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                 }
-                venta.cliente?.takeIf { it.isNotBlank() }?.let { cliente ->
-                    Column(modifier = Modifier.weight(1f)) {
+
+                // Cliente opcional
+                val clienteVal = venta.cliente?.takeIf { it.isNotBlank() }
+                if (clienteVal != null) {
+                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                         Text("Cliente", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                        Text(cliente, style = MaterialTheme.typography.bodyMedium)
+                        Text(clienteVal, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
+            }
+
+            venta.total_venta?.let { total ->
+                Text(
+                    text = "Total: $${String.format("%.2f", total)}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }

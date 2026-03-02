@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-
+import android.util.Log
 class InventarioViewModel : ViewModel() {
 
     // 1. Estados de la Lista
@@ -29,14 +29,30 @@ class InventarioViewModel : ViewModel() {
     // 3. Carga de datos (Responsabilidad principal)
     fun cargarRollos() {
         viewModelScope.launch {
+            // 1. IMPORTANTE: No limpies _rollos.value aquí.
+            // Si ya hay datos, deja que se vean mientras el spinner de arriba gira.
+
             _isLoading.value = true
-            _errorMessage.value = null
+            _errorMessage.value = null // Limpiamos el error para que la "ErrorCard" desaparezca
+
             try {
-                _rollos.value = ApiService.obtenerRollos()
+                // 2. Llamada a la API
+                val resultado = ApiService.obtenerRollos()
+
+                // 3. Actualizamos los datos
+                _rollos.value = resultado
+                Log.d("API_SUCCESS", "Se cargaron ${resultado.size} rollos")
+
             } catch (e: Exception) {
-                _errorMessage.value = "Error al conectar con el servidor"
-                _eventos.emit("❌ No se pudo cargar el inventario")
+                val errorReal = e.localizedMessage ?: e.message ?: "Error desconocido"
+                Log.e("API_ERROR", "Detalle del fallo: $errorReal", e)
+
+                // 4. Si falla, mostramos el error pero NO borramos los rollos que ya teníamos
+                // así el usuario al menos ve la última información conocida.
+                _errorMessage.value = "Fallo: $errorReal"
+                _eventos.emit("❌ Error: $errorReal")
             } finally {
+                // 5. Esto detiene la animación del PullToRefresh en la UI
                 _isLoading.value = false
             }
         }

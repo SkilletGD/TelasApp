@@ -3,6 +3,7 @@ package com.example.telasapp.features.detail.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Print
@@ -16,21 +17,27 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ShareActionsRow(
     onPrint: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    enabled: Boolean = true // <-- AGREGA ESTO
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedButton(
             onClick = onPrint,
             modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+            enabled = enabled // Lo aplicamos al botón
         ) {
             Icon(Icons.Default.Print, null)
             Spacer(Modifier.width(8.dp))
             Text("Imprimir")
         }
+
         OutlinedButton(
             onClick = onShare,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            enabled = enabled // Lo aplicamos al botón
         ) {
             Icon(Icons.Default.Share, null)
             Spacer(Modifier.width(8.dp))

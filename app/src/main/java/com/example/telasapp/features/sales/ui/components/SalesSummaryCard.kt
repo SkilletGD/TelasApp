@@ -21,20 +21,39 @@ fun SalesSummaryCard(ventas: List<Venta>) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "Resumen General",
+                "Resumen General de Ventas",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("Ventas: ${ventas.size}", style = MaterialTheme.typography.bodyMedium)
-                    Text("Vendedores: ${ventas.map { it.vendedor }.distinct().size}", style = MaterialTheme.typography.bodyMedium)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Total Tickets: ${ventas.size}", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Vendedores: ${ventas.map { it.vendedor }.distinct().size}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+
+                    // NUEVO: Suma de dinero total (si el campo existe en el modelo)
+                    val ingresosTotales = ventas.sumOf { it.total_venta ?: 0.0 }
+                    if (ingresosTotales > 0) {
+                        Text(
+                            text = "Recaudado: $${"%.2f".format(ingresosTotales)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
+
                 Column(horizontalAlignment = Alignment.End) {
-                    val totalMetros = ventas.sumOf { it.cantidad_vendida }
-                    Text("Total Metros", style = MaterialTheme.typography.labelSmall)
+                    // --- CORRECCIÓN AQUÍ: Usamos metros_vendidos ---
+                    val totalMetros = ventas.sumOf { it.metros_vendidos }
+
+                    Text("Metros Totales", style = MaterialTheme.typography.labelSmall)
                     Text(
                         text = "${"%.2f".format(totalMetros)}m",
                         style = MaterialTheme.typography.headlineSmall,

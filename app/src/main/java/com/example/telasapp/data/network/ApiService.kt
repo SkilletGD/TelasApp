@@ -11,44 +11,50 @@ object ApiService {
     private val client = ApiClient.client
     private const val BASE_URL = ApiClient.BASE_URL
 
+    // Obtiene la lista de lotes (vista general)
     suspend fun obtenerRollos(): List<Rollo> {
         return client.get("$BASE_URL/rollos").body()
     }
 
-    suspend fun crearRollo(rollo: Rollo): Rollo =
-        client.post("$BASE_URL/rollos") {
+    // NUEVO: Obtiene el inventario desglosado por cada rollo físico
+    // Útil si quieres una pantalla que muestre "Rollo 1, Rollo 2..."
+    suspend fun obtenerInventarioDetallado(): List<Rollo> {
+        return client.get("$BASE_URL/inventario/detalle").body()
+    }
+
+    suspend fun crearRollo(rollo: Rollo): Rollo {
+        return client.post("$BASE_URL/rollos") {
             contentType(ContentType.Application.Json)
             setBody(rollo)
         }.body()
+    }
 
     suspend fun actualizarRollo(rollo: Rollo): Boolean {
         val response = client.put("$BASE_URL/rollos/${rollo.id}") {
             contentType(ContentType.Application.Json)
             setBody(rollo)
         }
-        // Verificamos si fue exitoso (200 OK o 204 No Content)
         return response.status.isSuccess()
     }
 
-    // En tu ApiService.kt - AGREGA esta función
     suspend fun eliminarRollo(rolloId: Int): Boolean {
         val response: HttpResponse = client.delete("$BASE_URL/rollos/$rolloId")
-        return response.status == HttpStatusCode.OK
+        return response.status.isSuccess()
     }
 
     suspend fun registrarVenta(venta: Venta): String {
-        val response: String = client.post("$BASE_URL/ventas") {
+        // Cambiamos a HttpResponse para manejar mejor los errores de stock de tu nueva API
+        val response = client.post("$BASE_URL/ventas") {
             contentType(ContentType.Application.Json)
             setBody(venta)
-        }.body()
-        return response
+        }
+        return response.bodyAsText() // Devolvemos el mensaje de éxito o error del servidor
     }
-    // En tu ApiService.kt - agrega esta función
+
     suspend fun obtenerVentas(): List<Venta> {
         return client.get("$BASE_URL/ventas").body()
     }
 
-    // --- ESTA ES LA QUE TE FALTABA PARA EL DETALLE ---
     suspend fun obtenerRolloPorId(id: Int): Rollo {
         return client.get("$BASE_URL/rollos/$id").body()
     }
