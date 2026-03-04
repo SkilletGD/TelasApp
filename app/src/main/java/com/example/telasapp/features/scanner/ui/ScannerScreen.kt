@@ -32,6 +32,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.example.telasapp.features.scanner.analyzer.QRScannerAnalyzer
+import com.example.telasapp.navigation.Screen
 import java.util.concurrent.Executors
 
 @Composable
@@ -39,6 +40,14 @@ fun ScannerScreen(navController: NavController) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+
+    // Al principio de tu ScannerScreen
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraExecutor.shutdown()
+        }
+    }
+
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
 
@@ -57,15 +66,27 @@ fun ScannerScreen(navController: NavController) {
                         .build()
                         .also {
                             it.setAnalyzer(cameraExecutor, QRScannerAnalyzer { qrContent ->
-                                val id = qrContent.lines()
-                                    .firstOrNull { line -> line.startsWith("ID:") }
-                                    ?.replace("ID:", "")?.trim()?.toIntOrNull()
+                                // 1. Buscamos específicamente la línea que contiene el ID
+                                val id = try {
+                                    val lineas = qrContent.lines()
+                                    // Buscamos la línea que tiene "LOTE ID:"
+                                    val lineaId = lineas.find { it.contains("LOTE ID:", ignoreCase = true) }
 
+                                    if (lineaId != null) {
+                                        // Extraemos solo los números de esa línea específica
+                                        lineaId.filter { it.isDigit() }.toIntOrNull()
+                                    } else {
+                                        // Si por alguna razón el QR solo trae el número (respaldo)
+                                        qrContent.trim().toIntOrNull()
+                                    }
+                                } catch (e: Exception) {
+                                    null
+                                }
                                 if (id != null) {
                                     cameraProvider.unbindAll()
                                     ContextCompat.getMainExecutor(context).execute {
                                         navController.navigate("detalleRollo/$id") {
-                                            popUpTo("scanner") { inclusive = true }
+                                            popUpTo(Screen.Scanner.route) { inclusive = true }
                                         }
                                     }
                                 }

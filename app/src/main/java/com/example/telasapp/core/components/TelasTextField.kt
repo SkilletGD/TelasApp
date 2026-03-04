@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun TelasTextField(
@@ -18,6 +19,8 @@ fun TelasTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     prefix: @Composable (() -> Unit)? = null,
     enabled: Boolean = true, // <--- AGREGAMOS ESTO
+    trailingIcon: @Composable (() -> Unit)? = null, // <--- AGREGADO
+    visualTransformation: VisualTransformation = VisualTransformation.None, // <--- AGREGADO
     modifier: Modifier = Modifier.fillMaxWidth()
 ) {
     OutlinedTextField(
@@ -34,6 +37,8 @@ fun TelasTextField(
         },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         prefix = prefix,
+        trailingIcon = trailingIcon, // <--- PASAR AL INTERNO
+        visualTransformation = visualTransformation, // <--- PASAR AL INTERNO
         singleLine = true
     )
 }

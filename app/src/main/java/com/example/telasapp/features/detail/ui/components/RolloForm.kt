@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.telasapp.core.components.TelasTextField
 
 @Composable
 fun RolloForm(
@@ -37,6 +38,9 @@ fun RolloForm(
 
     // Info del sistema (Solo lectura)
     metrosTotales: Double,
+
+    imagenUrl: String, // <--- NUEVO
+    onImagenUrlChange: (String) -> Unit,
 
     enabled: Boolean = true
 ) {
@@ -67,6 +71,13 @@ fun RolloForm(
                 modifier = Modifier.weight(1f)
             )
         }
+
+        TelasTextField(
+            value = imagenUrl,
+            onValueChange = onImagenUrlChange,
+            label = "URL de la Imagen",
+            enabled = enabled
+        )
 
         // --- 2. PRECIO Y CANTIDAD (EDITABLES) ---
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

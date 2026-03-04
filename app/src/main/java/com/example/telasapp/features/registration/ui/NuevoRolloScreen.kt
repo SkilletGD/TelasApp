@@ -12,6 +12,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.telasapp.core.components.TelasTextField
 import com.example.telasapp.data.models.Rollo
+import com.example.telasapp.features.auth.viewmodel.AuthConfirmViewModel
+import com.example.telasapp.features.auth.ui.components.AuthConfirmDialog
 import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
 import com.example.telasapp.features.registration.utils.RegistrationValidator
 import com.example.telasapp.features.registration.viewmodel.RegistrationViewModel
@@ -21,6 +23,8 @@ fun NuevoRolloScreen(
     navController: NavController,
     regVm: RegistrationViewModel,
     invVm: InventarioViewModel,
+    authConfirmVm: AuthConfirmViewModel, // PASO 1: Inyectar el ViewModel de confirmación
+    userEmail: String, // PASO 2: Necesitamos el correo del usuario logueado
     snackbarHostState: SnackbarHostState
 ) {
     var tipoTela by remember { mutableStateOf("") }
@@ -37,8 +41,43 @@ fun NuevoRolloScreen(
 
     var errores by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
+    // PASO 3: Estado para controlar el diálogo
+    var mostrarConfirmacion by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         regVm.eventos.collect { snackbarHostState.showSnackbar(it) }
+    }
+
+    // PASO 4: Mostrar el Diálogo si el estado es true
+    if (mostrarConfirmacion) {
+        AuthConfirmDialog(
+            email = userEmail,
+            onDismiss = {
+                mostrarConfirmacion = false
+                authConfirmVm.reset()
+            },
+            onSuccess = {
+                mostrarConfirmacion = false
+                // Aquí ejecutamos la lógica real de guardado que ya tenías
+                val nuevoLote = Rollo(
+                    tipo_tela = tipoTela.trim(),
+                    color = color.trim(),
+                    codigo = codigo.trim(),
+                    metros_por_rollo = metrosPorRollo.toDouble(),
+                    cantidad_rollos = cantidadRollos.toInt(),
+                    precio = precio.toDouble(),
+                    proveedor = proveedor.trim().takeIf { it.isNotBlank() },
+                    fecha_compra = fechaCompra,
+                    registrado_por = userEmail // Usamos el correo real
+                )
+
+                regVm.agregarRollo(nuevoLote) {
+                    invVm.cargarRollos()
+                    navController.popBackStack()
+                }
+            },
+            authConfirmVm = authConfirmVm
+        )
     }
 
     Column(
@@ -125,29 +164,15 @@ fun NuevoRolloScreen(
 
         Button(
             onClick = {
-                // NOTA: Deberás actualizar tu RegistrationValidator para estos nuevos campos
+                // Primero validamos los campos de texto
                 val validacion = RegistrationValidator.validarLote(
                     tipoTela, color, codigo, metrosPorRollo, cantidadRollos, precio, fechaCompra
                 )
                 errores = validacion
 
                 if (validacion.isEmpty()) {
-                    val nuevoLote = Rollo(
-                        tipo_tela = tipoTela.trim(),
-                        color = color.trim(),
-                        codigo = codigo.trim(),
-                        metros_por_rollo = metrosPorRollo.toDouble(),
-                        cantidad_rollos = cantidadRollos.toInt(),
-                        precio = precio.toDouble(),
-                        proveedor = proveedor.trim().takeIf { it.isNotBlank() },
-                        fecha_compra = fechaCompra,
-                        registrado_por = "Admin" // Aquí podrías usar el nombre del usuario logueado
-                    )
-
-                    regVm.agregarRollo(nuevoLote) {
-                        invVm.cargarRollos()
-                        navController.popBackStack()
-                    }
+                    // PASO 5: En lugar de guardar directo, disparamos el diálogo
+                    mostrarConfirmacion = true
                 }
             },
             modifier = Modifier.fillMaxWidth().height(56.dp)

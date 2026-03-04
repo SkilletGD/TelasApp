@@ -52,4 +52,22 @@ class AuthRepository(private val client: HttpClient, private val tokenManager: T
             Result.failure(Exception("Error de conexión: ${e.localizedMessage}"))
         }
     }
+
+    // Agrega esta función a tu clase AuthRepository
+    suspend fun verificarPassword(email: String, pass: String): Result<Boolean> {
+        return try {
+            val response: HttpResponse = client.post(url) {
+                contentType(ContentType.Application.Json)
+                setBody(LoginRequest(email, pass))
+            }
+
+            if (response.status == HttpStatusCode.OK) {
+                Result.success(true)
+            } else {
+                Result.failure(Exception("Contraseña incorrecta"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

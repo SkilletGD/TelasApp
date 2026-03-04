@@ -16,6 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.telasapp.data.models.UserRole
+import com.example.telasapp.data.preferences.TokenManager
+import com.example.telasapp.features.auth.ui.components.AuthConfirmDialog
+import com.example.telasapp.features.auth.viewmodel.AuthConfirmViewModel
 import com.example.telasapp.features.auth.viewmodel.AuthState
 import com.example.telasapp.features.auth.viewmodel.AuthViewModel
 import com.example.telasapp.features.detail.ui.components.* // Importamos los componentes
@@ -29,32 +32,78 @@ fun DetailScreen(
     detailVm: DetailViewModel,
     invVm: InventarioViewModel,
     authVm: AuthViewModel,
+    authConfirmVm: AuthConfirmViewModel,
+    tokenManager: TokenManager,
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
-    val rolloOriginal by detailVm.rollo.collectAsState()
-    var showDeleteDialog by remember { mutableStateOf(false) }
 
-    val authState by authVm.authState.collectAsState()
-    val isAdmin = (authState as? AuthState.Success)?.user?.role == UserRole.ADMIN
+    // 1. FUENTE DE VERDAD: Rol y Email desde DataStore
+    val savedRole by tokenManager.userRole.collectAsState(initial = null)
+    val userEmail by tokenManager.userEmail.collectAsState(initial = "")
+    val isAdmin = savedRole == UserRole.ADMIN.name
+
+    val rolloOriginal by detailVm.rollo.collectAsState()
+
+    // Estados para controlar los diálogos
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var accionSeguridad by remember { mutableStateOf<String?>(null) } // "GUARDAR" o "ELIMINAR"
 
     // --- ESTADOS EDITABLES ---
-    // Usamos remember(rolloOriginal) para que si el objeto cambia (por un refresh), los campos se actualicen
     var tipoTela by remember(rolloOriginal) { mutableStateOf(rolloOriginal?.tipo_tela ?: "") }
     var color by remember(rolloOriginal) { mutableStateOf(rolloOriginal?.color ?: "") }
     var codigo by remember(rolloOriginal) { mutableStateOf(rolloOriginal?.codigo ?: "") }
     var precio by remember(rolloOriginal) { mutableStateOf(rolloOriginal?.precio?.toString() ?: "") }
+    var imagenUrl by remember(rolloOriginal) { mutableStateOf(rolloOriginal?.imagen_url ?: "") }
 
-    // IMPORTANTE: Esta es la variable que pasaremos al TextField de Rollos
     var rollosEditables by remember(rolloOriginal) {
         mutableStateOf((rolloOriginal?.rollos_disponibles ?: 0).toString())
     }
 
     LaunchedEffect(rolloId) { rolloId?.let { detailVm.cargarRollo(it) } }
 
-    // Recolectar eventos para mostrar el Snackbar
     LaunchedEffect(Unit) {
         detailVm.eventos.collect { snackbarHostState.showSnackbar(it) }
+    }
+
+    // --- DIÁLOGO DE SEGURIDAD (EL CUADRITO) ---
+    if (accionSeguridad != null) {
+        AuthConfirmDialog(
+            email = userEmail ?: "",
+            onDismiss = {
+                accionSeguridad = null
+                authConfirmVm.reset()
+            },
+            onSuccess = {
+                val tempAccion = accionSeguridad
+                accionSeguridad = null // Cerramos antes de ejecutar
+
+                if (tempAccion == "GUARDAR") {
+                    val updated = rolloOriginal?.copy(
+                        tipo_tela = tipoTela,
+                        color = color,
+                        codigo = codigo,
+                        precio = precio.toDoubleOrNull() ?: (rolloOriginal?.precio ?: 0.0),
+                        cantidad_rollos = rollosEditables.toIntOrNull() ?: (rolloOriginal?.cantidad_rollos ?: 0),
+                        imagen_url = imagenUrl // <--- AGREGADO
+                    )
+                    updated?.let {
+                        detailVm.actualizarRollo(it) {
+                            invVm.cargarRollos()
+                            navController.popBackStack()
+                        }
+                    }
+                } else if (tempAccion == "ELIMINAR") {
+                    rolloId?.let { id ->
+                        detailVm.eliminarRollo(id) {
+                            invVm.cargarRollos()
+                            navController.popBackStack()
+                        }
+                    }
+                }
+            },
+            authConfirmVm = authConfirmVm
+        )
     }
 
     if (rolloOriginal == null) {
@@ -67,20 +116,19 @@ fun DetailScreen(
             modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Tarjeta de Resumen (Solo Lectura)
+            // Tarjeta de Resumen
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                 Column(Modifier.padding(16.dp).fillMaxWidth()) {
                     Text("Resumen de Inventario", style = MaterialTheme.typography.labelLarge)
                     Text(
-                        "${rollo.metros_reales_restantes ?: 0.0}m disponibles en total",
+                        "${rollo.metros_reales_restantes ?: 0.0}m disponibles",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    Text("${rollo.rollos_disponibles ?: 0} de ${rollo.cantidad_rollos} rollos activos")
+                    Text("${rollo.rollos_disponibles ?: 0} rollos activos de ${rollo.cantidad_rollos}")
                 }
             }
 
-            // --- LLAMADA CORREGIDA AL FORMULARIO ---
             RolloForm(
                 tipoTela = tipoTela,
                 onTipoTelaChange = { tipoTela = it },
@@ -90,20 +138,17 @@ fun DetailScreen(
                 onCodigoChange = { codigo = it },
                 precio = precio,
                 onPrecioChange = { precio = it },
-                // Pasamos la versión String y el callback de cambio
                 rollosDisponibles = rollosEditables,
                 onRollosChange = { rollosEditables = it },
-                // Solo lectura
                 metrosTotales = rollo.metros_reales_restantes ?: 0.0,
+                imagenUrl = imagenUrl,
+                onImagenUrlChange = { imagenUrl = it },
                 enabled = isAdmin
             )
 
-            // Desglose (Opcional)
             if (!rollo.detalles_rollos.isNullOrEmpty()) {
                 Text("Desglose del Lote", style = MaterialTheme.typography.titleSmall)
-                rollo.detalles_rollos.forEach { detalle ->
-                    DetalleRolloItem(detalle)
-                }
+                rollo.detalles_rollos.forEach { detalle -> DetalleRolloItem(detalle) }
             }
 
             ShareActionsRow(
@@ -120,24 +165,11 @@ fun DetailScreen(
                     onClick = { showDeleteDialog = true },
                     enabled = isAdmin
                 ) {
-                    Icon(Icons.Default.Delete, "Borrar", tint = Color.Red)
+                    Icon(Icons.Default.Delete, "Borrar", tint = if (isAdmin) Color.Red else Color.Gray)
                 }
 
                 Button(
-                    onClick = {
-                        val updated = rollo.copy(
-                            tipo_tela = tipoTela,
-                            color = color,
-                            codigo = codigo,
-                            precio = precio.toDoubleOrNull() ?: rollo.precio,
-                            // Si tu API permite actualizar la cantidad de rollos base:
-                            cantidad_rollos = rollosEditables.toIntOrNull() ?: rollo.cantidad_rollos
-                        )
-                        detailVm.actualizarRollo(updated) {
-                            invVm.cargarRollos() // Refrescar lista principal
-                            navController.popBackStack()
-                        }
-                    },
+                    onClick = { accionSeguridad = "GUARDAR" },
                     enabled = isAdmin,
                     modifier = Modifier.weight(1f)
                 ) {
@@ -149,17 +181,22 @@ fun DetailScreen(
         }
     }
 
-    // Diálogo de eliminación (se mantiene igual)
+    // Diálogo de confirmación visual antes del de seguridad
     if (showDeleteDialog) {
-        DeleteConfirmDialog(
-            onDismiss = { showDeleteDialog = false },
-            onConfirm = {
-                rolloId?.let { id ->
-                    detailVm.eliminarRollo(id) {
-                        invVm.cargarRollos()
-                        navController.popBackStack()
-                    }
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("¿Eliminar Lote?") },
+            text = { Text("Esta acción no se puede deshacer. Se requerirá tu contraseña de administrador.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    accionSeguridad = "ELIMINAR"
+                }) {
+                    Text("Eliminar", color = Color.Red)
                 }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
             }
         )
     }

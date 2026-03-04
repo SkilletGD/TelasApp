@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.telasapp.data.preferences.TokenManager
+import com.example.telasapp.features.auth.viewmodel.AuthConfirmViewModel
 import com.example.telasapp.features.auth.ui.LoginScreen
 import com.example.telasapp.features.auth.viewmodel.AuthViewModel
 import com.example.telasapp.features.cart.ui.CartScreen
@@ -49,6 +50,11 @@ fun AppNavigation(
 
     // Observamos el estado de autenticación del ViewModel
     val authState by authVm.authState.collectAsState()
+
+    // Agrega esto arriba, junto a las otras observaciones (como la de authState)
+    val userEmail by tokenManager.userEmail.collectAsState(initial = "")
+// Instanciamos el ViewModel de confirmación (puedes usar koin o viewModel())
+    val authConfirmVm: AuthConfirmViewModel = koinViewModel()
 
     NavHost(
         navController = navController,
@@ -87,9 +93,17 @@ fun AppNavigation(
 
         // --- 5. REGISTRO DE NUEVOS ROLLOS ---
         composable(Screen.Registro.route) {
-            val regVm: RegistrationViewModel = viewModel()
-            val invVm: InventarioViewModel = viewModel()
-            NuevoRolloScreen(navController, regVm, invVm, snackbarHostState)
+            val regVm: RegistrationViewModel = koinViewModel()
+            val invVm: InventarioViewModel = koinViewModel()
+
+            NuevoRolloScreen(
+                navController = navController,
+                regVm = regVm,
+                invVm = invVm,
+                authConfirmVm = authConfirmVm, // <-- NUEVO
+                userEmail = userEmail ?: "",   // <-- NUEVO
+                snackbarHostState = snackbarHostState
+            )
         }
 
         // --- 6. ESCÁNER ---
@@ -97,18 +111,13 @@ fun AppNavigation(
             ScannerScreen(navController)
         }
 
-        // --- 7. VENTA (FLUJO DE CARRITO) ---
+        // --- 7. VENTA ---
         composable(
             route = Screen.Venta.route,
-            // Asegúrate de que la ruta esté bien definida con el argumento
-            arguments = listOf(navArgument("rolloId") { type = NavType.StringType })
+            arguments = listOf(navArgument("rolloId") { type = NavType.IntType }) // <-- Cambiar a IntType
         ) { backStackEntry ->
-            // 1. Extraemos el ID de forma segura y directa
-            val rolloIdStr = backStackEntry.arguments?.getString("rolloId")
-            val rolloId = rolloIdStr?.toIntOrNull()
+            val rolloId = backStackEntry.arguments?.getInt("rolloId") // <-- Usar getInt
 
-            // 2. MAGIA: Usamos el backStackEntry para que el ViewModel
-            // esté ligado ÚNICAMENTE a esta entrada de navegación
             val salesVm: SalesViewModel = koinViewModel()
             val invVm: InventarioViewModel = koinViewModel()
 
@@ -116,8 +125,10 @@ fun AppNavigation(
                 navController = navController,
                 rolloId = rolloId,
                 salesVm = salesVm,
-                cartVm = sharedCartVm, // Este sí es compartido (está bien)
+                cartVm = sharedCartVm,
                 invVm = invVm,
+                authConfirmVm = authConfirmVm,
+                userEmail = userEmail ?: "",
                 snackbarHostState = snackbarHostState
             )
         }
@@ -134,17 +145,28 @@ fun AppNavigation(
             )
         }
 
-        // --- 9. DETALLE DEL ROLLO ---
-        composable(Screen.DetalleRollo.route) { backStackEntry ->
-            val invVm: InventarioViewModel = viewModel()
-            val detailVm: DetailViewModel = viewModel()
-            val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()
+        // --- 9. DETALLE DEL ROLLO (SOLUCIÓN AL CARGANDO INFINITO) ---
+        composable(
+            route = Screen.DetalleRollo.route, // "detalleRollo/{rolloId}"
+            arguments = listOf(
+                navArgument("rolloId") { type = NavType.IntType } // 1. Definimos que es un entero
+            )
+        ) { backStackEntry ->
+            val invVm: InventarioViewModel = koinViewModel()
+            val detailVm: DetailViewModel = koinViewModel()
+            val authConfirmVm: AuthConfirmViewModel = koinViewModel()
+
+            // 2. Extraemos como Int directamente (sin toIntOrNull)
+            val rolloId = backStackEntry.arguments?.getInt("rolloId")
+
             DetailScreen(
                 navController = navController,
                 rolloId = rolloId,
                 detailVm = detailVm,
                 invVm = invVm,
                 authVm = authVm,
+                authConfirmVm = authConfirmVm,
+                tokenManager = tokenManager,
                 snackbarHostState = snackbarHostState
             )
         }

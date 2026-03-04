@@ -5,31 +5,29 @@ import kotlinx.serialization.SerialName
 
 @Serializable
 data class Rollo(
-    // Campos base de la tabla 'rollos'
     val id: Int? = null,
-    @SerialName("tipo_tela") val tipo_tela: String,
+    // Les ponemos valores por defecto para que si la API falla, el modelo no explote
+    @SerialName("tipo_tela") val tipo_tela: String = "",
     val color: String? = null,
-    val codigo: String,
+    val codigo: String = "",
 
-    @SerialName("metros_por_rollo") val metros_por_rollo: Double,
-    @SerialName("cantidad_rollos") val cantidad_rollos: Int,
+    @SerialName("metros_por_rollo") val metros_por_rollo: Double = 0.0,
+    @SerialName("cantidad_rollos") val cantidad_rollos: Int = 0,
 
     @SerialName("metros_totales") val metros_totales: Double? = null,
     @SerialName("metros_restantes") val metros_restantes: Double? = null,
 
-    @SerialName("fecha_compra") val fecha_compra: String, // Recibido como String de MySQL
+    @SerialName("fecha_compra") val fecha_compra: String = "",
     val proveedor: String? = null,
     @SerialName("registrado_por") val registrado_por: String? = null,
 
     val estado: String? = "Disponible",
-    val precio: Double,
+    val precio: Double = 0.0, // <-- Si la API no manda precio, ahora será 0.0 en lugar de crashear
     @SerialName("imagen_url") val imagen_url: String? = null,
 
-    // Campos CALCULADOS que envías en el GET /rollos
     @SerialName("rollos_disponibles") val rollos_disponibles: Int? = null,
     @SerialName("metros_reales_restantes") val metros_reales_restantes: Double? = null,
 
-    // Para cuando consultes el detalle (GET /rollos/:id)
     @SerialName("detalles_rollos") val detalles_rollos: List<DetalleRollo>? = emptyList()
 )
 
