@@ -1,9 +1,8 @@
 package com.example.telasapp.features.cart.data.models
 
-import java.util.UUID.randomUUID
 
 data class CartItem(
-    val id: String = randomUUID().toString(),
+    val id: Int = System.currentTimeMillis().toInt(),
     val rolloId: Int,          // ID del rollo físico individual (detalle_rollos)
     val loteCodigo: String,    // NUEVO: Para mostrar "Lote: ABC-123" en el carrito
     val tipoTela: String,

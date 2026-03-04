@@ -2,14 +2,14 @@ package com.example.telasapp.features.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.telasapp.data.models.User     // Importa el modelo
-import com.example.telasapp.data.models.UserRole // Importa el enum
-import kotlinx.coroutines.delay
+import com.example.telasapp.data.models.User
+import com.example.telasapp.data.models.UserRole
+import com.example.telasapp.features.auth.data.repository.AuthRepository // IMPORTA TU REPOSITORIO
+import com.example.telasapp.data.preferences.TokenManager // IMPORTA TU TOKEN MANAGER
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// El estado vive aquí, fuera de la clase pero en el mismo archivo
 sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
@@ -17,26 +17,36 @@ sealed class AuthState {
     data class Error(val message: String) : AuthState()
 }
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(private val repository: AuthRepository) : ViewModel() {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
     fun login(email: String, pass: String) {
+        if (email.isBlank() || pass.isBlank()) {
+            _authState.value = AuthState.Error("Llena todos los campos")
+            return
+        }
+
         viewModelScope.launch {
             _authState.value = AuthState.Loading
-            delay(1000)
 
-            if (email == "admin@telas.com" && pass == "admin123") {
-                _authState.value = AuthState.Success(User(email, UserRole.ADMIN))
-            } else if (email.contains("@") && pass.length >= 6) {
-                _authState.value = AuthState.Success(User(email, UserRole.VENDEDOR))
-            } else {
-                _authState.value = AuthState.Error("Credenciales inválidas")
-            }
+            repository.login(email, pass)
+                .onSuccess { response ->
+                    val user = User(email = response.email ?: email, role = UserRole.VENDEDOR)
+                    _authState.value = AuthState.Success(user)
+                }
+                .onFailure { error ->
+                    _authState.value = AuthState.Error(error.message ?: "Error al conectar")
+                }
         }
     }
 
-    fun logout() {
-        _authState.value = AuthState.Idle
+    // Nota: El TokenManager debería ser inyectado o pasado desde el repositorio,
+    // pero si lo pasas por aquí, asegúrate de que el import sea correcto.
+    fun logout(tokenManager: TokenManager) {
+        viewModelScope.launch {
+            tokenManager.clearSession()
+            _authState.value = AuthState.Idle
+        }
     }
 }

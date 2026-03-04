@@ -7,7 +7,11 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.ui.graphics.vector.ImageVector
 
-sealed class Screen(val route: String, val title: String? = null, val icon: ImageVector? = null) {
+sealed class Screen(
+    val route: String,
+    val title: String? = null,
+    val icon: ImageVector? = null
+) {
 
     object Splash : Screen("splash")
     // Pantallas principales (Bottom Bar)

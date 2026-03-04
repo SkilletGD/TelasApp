@@ -20,20 +20,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.telasapp.R
+import com.example.telasapp.data.preferences.TokenManager
 import com.example.telasapp.navigation.Screen
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 
 @Composable
 fun SplashScreen(
-    navController: NavController
+    navController: NavController,
+    tokenManager: TokenManager // Agregamos el parámetro
 ){
     LaunchedEffect(Unit) {
-        delay(2000) // Duración del Splash
-        navController.navigate(Screen.Login.route) {
-            popUpTo(Screen.Splash.route) { inclusive = true } // Elimina Splash del historial
+        delay(2000) // Tiempo para que se vea tu logo
+
+        // Leemos el valor actual del token guardado en DataStore
+        val savedToken = tokenManager.token.first()
+
+        if (!savedToken.isNullOrEmpty()) {
+            // ¡Sesión activa! Vamos al Inventario
+            navController.navigate(Screen.Inventario.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+        } else {
+            // No hay sesión, vamos al Login
+            navController.navigate(Screen.Login.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
         }
     }
+    Splash() // Tu función de diseño se queda igual
 
     Splash()
 }
@@ -64,6 +80,7 @@ fun Splash() {
 @Composable
 fun SplashScreenPreview(showBackground: Boolean = true){
     SplashScreen(
-        navController = NavController(LocalContext.current)
+        navController = NavController(LocalContext.current),
+        tokenManager = TokenManager(LocalContext.current)
     )
 }

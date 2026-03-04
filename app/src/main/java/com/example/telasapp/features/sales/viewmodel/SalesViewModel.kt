@@ -31,13 +31,13 @@ class SalesViewModel : ViewModel() {
 
     fun cargarRolloParaVenta(id: Int) {
         viewModelScope.launch {
-            _isLoading.value = true // Agregamos loading aquí también
+            _isLoading.value = true
+            _rolloActual.value = null // <-- CRÍTICO: Limpiar antes de pedir el nuevo
             try {
                 val resultado = ApiService.obtenerRolloPorId(id)
                 _rolloActual.value = resultado
-                _errorMessage.value = null
             } catch (e: Exception) {
-                _errorMessage.value = "Error al obtener datos del lote"
+                _errorMessage.value = "Error al obtener datos"
             } finally {
                 _isLoading.value = false
             }
@@ -62,15 +62,20 @@ class SalesViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // --- CORRECCIÓN CLAVE: Usamos metros_vendidos ---
+                // LOG DE DEPURACIÓN: Revisa tu Logcat para ver qué ID está llegando aquí
+                println("DEBUG_VENTA: Enviando venta para el ID: $rolloId")
+
                 val venta = Venta(
-                    rollo_id = rolloId,
+                    rollo_id = rolloId, // <--- ASEGÚRATE QUE SEA EL PARÁMETRO
                     metros_vendidos = metros,
                     vendedor = vendedor,
                     cliente = cliente
                 )
+
+                // Llamada a la API
                 ApiService.registrarVenta(venta)
-                _eventos.emit("✅ Venta registrada correctamente")
+
+                _eventos.emit("✅ Venta registrada")
                 onSuccess()
             } catch (e: Exception) {
                 _eventos.emit("❌ Error: ${e.message}")

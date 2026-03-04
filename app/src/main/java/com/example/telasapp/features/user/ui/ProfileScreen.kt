@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.telasapp.data.models.UserRole
+import com.example.telasapp.data.preferences.TokenManager
 import com.example.telasapp.features.auth.viewmodel.AuthViewModel
 import com.example.telasapp.features.auth.viewmodel.AuthState
 import com.example.telasapp.navigation.Screen
@@ -21,12 +23,12 @@ import com.example.telasapp.navigation.Screen
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    authVm: AuthViewModel
+    authVm: AuthViewModel,
+    tokenManager: TokenManager
 ) {
-    val authState by authVm.authState.collectAsState()
 
-    // Obtenemos los datos del estado actual
-    val user = (authState as? AuthState.Success)?.user
+    val email by tokenManager.userEmail.collectAsState(initial = "Cargando...")
+    val role by tokenManager.userRole.collectAsState(initial = "Cargando...")
 
     Column(
         modifier = Modifier
@@ -34,60 +36,114 @@ fun ProfileScreen(
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = Icons.Default.Person,
-            contentDescription = null,
-            modifier = Modifier.size(100.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // --- AVATAR CON ESTILO ---
+        Surface(
+            modifier = Modifier.size(120.dp),
+            shape = androidx.compose.foundation.shape.CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(70.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Información de Usuario",
+            text = "Perfil de Usuario",
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        // --- CHIP DE ROL ---
+        val roleColor = if (role == "ADMIN") Color(0xFFFFC107) else MaterialTheme.colorScheme.secondary
+        AssistChip(
+            onClick = { },
+            label = { Text(role ?: "N/A", fontWeight = FontWeight.Bold) },
+            colors = AssistChipDefaults.assistChipColors(
+                labelColor = roleColor,
+                // Si no usas icono, puedes omitir leadingIconContentColor
+            )
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Card con los datos
+        // --- TARJETA DE DATOS ---
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ProfileDataItem(label = "Correo Electrónico", value = user?.email ?: "N/A")
-                ProfileDataItem(label = "Tipo de Usuario", value = user?.role?.name ?: "N/A")
-                ProfileDataItem(label = "Contraseña", value = "********") // Por seguridad no se muestra la real
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                ProfileDataItem(
+                    label = "Correo Electrónico",
+                    value = email ?: "N/A",
+                    icon = Icons.Default.Person
+                )
+
+                // Divisor sutil entre items
+                HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.5f))
+
+                ProfileDataItem(
+                    label = "Contraseña",
+                    value = "••••••••",
+                    icon = null // Podrías pasar otro icono si quieres
+                )
             }
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Botón de Cerrar Sesión
-        Button(
+        // --- BOTÓN CERRAR SESIÓN ---
+        OutlinedButton(
             onClick = {
-                authVm.logout()
-                // Al cerrar sesión, reiniciamos el grafo para ir al Login y borrar historial
+                authVm.logout(tokenManager)
                 navController.navigate(Screen.Login.route) {
                     popUpTo(0) { inclusive = true }
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = MaterialTheme.shapes.medium,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error)
         ) {
             Icon(Icons.Default.ExitToApp, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("CERRAR SESIÓN")
+            Text("CERRAR SESIÓN", fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-fun ProfileDataItem(label: String, value: String) {
-    Column {
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-        Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+fun ProfileDataItem(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector?) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }

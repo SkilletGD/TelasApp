@@ -27,14 +27,6 @@ fun ReporteVentasScreen(vm: SalesViewModel) {
     LaunchedEffect(Unit) { vm.cargarVentas() }
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Reporte de Ventas", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
-            )
-        }
     ) { paddingValues ->
         Column(
             modifier = Modifier

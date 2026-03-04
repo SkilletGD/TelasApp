@@ -54,13 +54,6 @@ fun RolloItem(
     val estadoActual = rollo.estado ?: "Disponible"
     val imagenUrl = rollo.imagen_url
 
-    LaunchedEffect(imagenUrl) {
-        println("DEBUG_IMAGEN: La URL recibida es -> $imagenUrl")
-    }
-
-    // PRUEBA DIRECTA (Borra esto después de probar)
-    val urlDePrueba = "https://cdn.pixabay.com/photo/2021/03/12/08/51/shorturl-6089108_1280.jpg"
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -183,6 +176,15 @@ fun RolloItem(
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Gray
                         )
+                        // --- 🛒 NUEVO BOTÓN DE VENTA ---
+                        Button(
+                            onClick = { onVentaClick(rollo.id ?: 0) },
+                            enabled = estadoActual == "Disponible" && metrosRestantes > 0,
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Venta")
+                        }
                     }
                 }
             }

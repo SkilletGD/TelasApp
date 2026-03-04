@@ -5,11 +5,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import com.example.telasapp.data.preferences.TokenManager
 import com.example.telasapp.features.auth.ui.LoginScreen
 import com.example.telasapp.features.auth.viewmodel.AuthViewModel
 import com.example.telasapp.features.cart.ui.CartScreen
@@ -25,6 +30,7 @@ import com.example.telasapp.features.sales.ui.ReporteVentasScreen
 import com.example.telasapp.features.sales.viewmodel.SalesViewModel
 import com.example.telasapp.features.scanner.ui.ScannerScreen
 import com.example.telasapp.features.splash.SplashScreen
+import org.koin.androidx.compose.koinViewModel
 
 // Importa tus futuras pantallas (puedes crearlas vacías por ahora para que no de error)
 // import com.example.telasapp.features.cart.ui.CartScreen
@@ -34,75 +40,92 @@ import com.example.telasapp.features.splash.SplashScreen
 fun AppNavigation(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState,
-    paddingValues: PaddingValues, // <-- NUEVO: Recibe el padding del Scaffold
-    authVm: AuthViewModel
+    paddingValues: PaddingValues,
+    authVm: AuthViewModel,
+    tokenManager: TokenManager
 ) {
-    // ESTA es la única instancia que debe existir
+    // Instancia compartida del carrito para que persista entre pantallas de venta
     val sharedCartVm: CartViewModel = viewModel()
+
+    // Observamos el estado de autenticación del ViewModel
+    val authState by authVm.authState.collectAsState()
 
     NavHost(
         navController = navController,
+        // El Splash decide a dónde ir, pero podrías cambiarlo dinámicamente aquí si quisieras
         startDestination = Screen.Splash.route,
-        modifier = Modifier.padding(paddingValues) // <-- APLICA EL PADDING AQUÍ
+        modifier = Modifier.padding(paddingValues)
     ) {
 
-        // --- AUTH ---
-        // 2. LOGIN
+        // --- 1. SPLASH ---
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                navController = navController,
+                tokenManager = tokenManager // <-- Pásale el objeto que inyectamos con Koin
+            )
+        }
+
+        // --- 2. AUTH ---
         composable(Screen.Login.route) {
             LoginScreen(vm = authVm, navController = navController)
         }
 
-        // 1. SPLASH
-        composable(Screen.Splash.route) {
-            SplashScreen(navController)
-        }
-        // --- PANTALLAS PRINCIPALES (Bottom Bar) ---
-
+        // --- 3. PANTALLAS PRINCIPALES ---
         composable(Screen.Inventario.route) {
             val invViewModel: InventarioViewModel = viewModel()
             InventarioScreen(navController, invViewModel, snackbarHostState)
         }
 
+        // --- 4. PERFIL ---
         composable(Screen.Perfil.route) {
-            // ProfileScreen(navController)
-            Text("Pantalla de Perfil") // Temporal hasta que la crees
+            com.example.telasapp.features.user.ui.ProfileScreen(
+                navController = navController,
+                authVm = authVm,
+                tokenManager = tokenManager
+            )
         }
 
-        // --- PANTALLAS SECUNDARIAS ---
-
+        // --- 5. REGISTRO DE NUEVOS ROLLOS ---
         composable(Screen.Registro.route) {
             val regVm: RegistrationViewModel = viewModel()
             val invVm: InventarioViewModel = viewModel()
             NuevoRolloScreen(navController, regVm, invVm, snackbarHostState)
         }
 
+        // --- 6. ESCÁNER ---
         composable(Screen.Scanner.route) {
             ScannerScreen(navController)
         }
 
-        composable(Screen.Venta.route) { backStackEntry ->
-            val salesVm: SalesViewModel = viewModel()
-            val invVm: InventarioViewModel = viewModel()
-            val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()
-            VentaScreen(navController, rolloId, salesVm, cartVm = sharedCartVm, invVm, snackbarHostState)
+        // --- 7. VENTA (FLUJO DE CARRITO) ---
+        composable(
+            route = Screen.Venta.route,
+            // Asegúrate de que la ruta esté bien definida con el argumento
+            arguments = listOf(navArgument("rolloId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            // 1. Extraemos el ID de forma segura y directa
+            val rolloIdStr = backStackEntry.arguments?.getString("rolloId")
+            val rolloId = rolloIdStr?.toIntOrNull()
+
+            // 2. MAGIA: Usamos el backStackEntry para que el ViewModel
+            // esté ligado ÚNICAMENTE a esta entrada de navegación
+            val salesVm: SalesViewModel = koinViewModel()
+            val invVm: InventarioViewModel = koinViewModel()
+
+            VentaScreen(
+                navController = navController,
+                rolloId = rolloId,
+                salesVm = salesVm,
+                cartVm = sharedCartVm, // Este sí es compartido (está bien)
+                invVm = invVm,
+                snackbarHostState = snackbarHostState
+            )
         }
 
-        composable(Screen.DetalleRollo.route) { backStackEntry ->
-            val invVm: InventarioViewModel = viewModel()
-            val detailVm: DetailViewModel = viewModel()
-            val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()
-            DetailScreen(navController, rolloId, detailVm, invVm, authVm, snackbarHostState)
-        }
-
-        composable("reporteVentas") {
-            val salesVm: SalesViewModel = viewModel()
-            ReporteVentasScreen(vm = salesVm)
-        }
-
+        // --- 8. CARRITO ---
         composable(Screen.Carrito.route) {
             val salesVm: SalesViewModel = viewModel()
             val invVm: InventarioViewModel = viewModel()
-
             CartScreen(
                 navController = navController,
                 cartVm = sharedCartVm,
@@ -110,12 +133,26 @@ fun AppNavigation(
                 invVm = invVm
             )
         }
-        composable(Screen.Perfil.route) {
-            // Importamos la pantalla que acabamos de crear
-            com.example.telasapp.features.user.ui.ProfileScreen(
+
+        // --- 9. DETALLE DEL ROLLO ---
+        composable(Screen.DetalleRollo.route) { backStackEntry ->
+            val invVm: InventarioViewModel = viewModel()
+            val detailVm: DetailViewModel = viewModel()
+            val rolloId = backStackEntry.arguments?.getString("rolloId")?.toIntOrNull()
+            DetailScreen(
                 navController = navController,
-                authVm = authVm // Usamos el ViewModel que ya estamos pasando por parámetro
+                rolloId = rolloId,
+                detailVm = detailVm,
+                invVm = invVm,
+                authVm = authVm,
+                snackbarHostState = snackbarHostState
             )
+        }
+
+        // --- 10. REPORTES ---
+        composable("reporteVentas") {
+            val salesVm: SalesViewModel = viewModel()
+            ReporteVentasScreen(vm = salesVm)
         }
     }
 }

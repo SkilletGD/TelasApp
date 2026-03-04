@@ -77,6 +77,8 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:2.3.5")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.5")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.5")
+    // MOTOR DE KTOR PARA ANDROID (Esta es la que te falta)
+    implementation("io.ktor:ktor-client-okhttp:2.3.12")
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
@@ -104,4 +106,11 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Koin para Android y Compose
+    val koin_version = "3.5.3"
+    implementation("io.insert-koin:koin-android:$koin_version")
+    implementation("io.insert-koin:koin-androidx-compose:$koin_version")
 }

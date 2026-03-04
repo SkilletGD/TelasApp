@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -18,27 +19,34 @@ import com.example.telasapp.core.components.BottomNavigationBar
 import com.example.telasapp.features.auth.viewmodel.AuthViewModel
 import com.example.telasapp.features.auth.viewmodel.AuthState
 import com.example.telasapp.data.models.UserRole
+import com.example.telasapp.data.preferences.TokenManager
 import com.example.telasapp.navigation.AppNavigation
 import com.example.telasapp.navigation.Screen
+import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TelasMainScreen(
-    authVm: AuthViewModel = viewModel()
-) {
+fun TelasMainScreen() {
+    // MAGIA DE KOIN: El ViewModel se inyecta con todo su repositorio y cliente
+    val authVm: AuthViewModel = koinViewModel()
+    val tokenManager: TokenManager = koinInject()
+
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Observamos el estado para los bloqueos de Admin
-    val authState by authVm.authState.collectAsState()
-    val userRole = (authState as? AuthState.Success)?.user?.role
-    val isAdmin = userRole == UserRole.ADMIN
+    // 1. Observamos el rol desde el DataStore (Persistente)
+    val savedRole by tokenManager.userRole.collectAsState(initial = null)
+
+    // 2. Convertimos el String del DataStore a tu Enum UserRole
+    val isAdmin = savedRole == UserRole.ADMIN.name
 
     // Definimos pantallas que NO tienen barras (Splash y Login)
     val noBarsScreens = listOf(Screen.Splash.route, Screen.Login.route)
     val isAuthFlow = currentRoute in noBarsScreens
+
 
     val rootScreens = listOf(
         Screen.Inventario.route,
@@ -107,7 +115,8 @@ fun TelasMainScreen(
             snackbarHostState = snackbarHostState,
             // Si es Splash o Login, usamos 0 padding para que sea pantalla completa
             paddingValues = if (isAuthFlow) PaddingValues(0.dp) else innerPadding,
-            authVm = authVm
+            authVm = authVm,
+            tokenManager = tokenManager
         )
     }
 }
