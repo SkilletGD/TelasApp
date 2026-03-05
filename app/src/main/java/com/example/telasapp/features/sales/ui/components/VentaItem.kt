@@ -49,7 +49,19 @@ fun VentaItem(venta: Venta) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Vendedor", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    Text(venta.vendedor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+
+                    // Lógica de respaldo para el vendedor
+                    val nombreVendedor = when {
+                        !venta.vendedor.isNullOrBlank() -> venta.vendedor
+                        else -> "Sin asignar / Sistema" // <-- Este es tu manejador de error visual
+                    }
+
+                    Text(
+                        text = nombreVendedor,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (venta.vendedor.isNullOrBlank()) Color.Red.copy(alpha = 0.6f) else Color.Unspecified
+                    )
                 }
 
                 // Cliente opcional

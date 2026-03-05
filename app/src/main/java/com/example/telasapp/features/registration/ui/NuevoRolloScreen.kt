@@ -17,6 +17,7 @@ import com.example.telasapp.features.auth.ui.components.AuthConfirmDialog
 import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
 import com.example.telasapp.features.registration.utils.RegistrationValidator
 import com.example.telasapp.features.registration.viewmodel.RegistrationViewModel
+import com.example.telasapp.features.sales.ui.utils.ExtractName
 
 @Composable
 fun NuevoRolloScreen(
@@ -43,6 +44,10 @@ fun NuevoRolloScreen(
 
     // PASO 3: Estado para controlar el diálogo
     var mostrarConfirmacion by remember { mutableStateOf(false) }
+
+    // Dentro del Composable
+    val nombreRegistro = remember(userEmail) { ExtractName(userEmail) }
+    var registradoPor by remember { mutableStateOf(nombreRegistro) }
 
     LaunchedEffect(Unit) {
         regVm.eventos.collect { snackbarHostState.showSnackbar(it) }
@@ -156,6 +161,13 @@ fun NuevoRolloScreen(
             value = proveedor,
             onValueChange = { proveedor = it },
             label = "Proveedor (Opcional)"
+        )
+
+        TelasTextField(
+            value = registradoPor,
+            onValueChange = { registradoPor = it },
+            label = "Registrado por",
+            enabled = false // Sugerencia: Bloquéalo para que no puedan cambiar quién lo registró
         )
 
         DatePickerField(fechaCompra) { fechaCompra = it }

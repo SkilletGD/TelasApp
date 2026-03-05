@@ -21,6 +21,7 @@ import com.example.telasapp.features.cart.viewmodel.CartViewModel
 import com.example.telasapp.features.inventory.viewmodel.InventarioViewModel
 import com.example.telasapp.features.sales.ui.components.RolloInfoCard
 import com.example.telasapp.features.sales.ui.components.VentaActionsRow
+import com.example.telasapp.features.sales.ui.utils.ExtractName
 import com.example.telasapp.features.sales.viewmodel.SalesViewModel
 import kotlinx.coroutines.launch
 
@@ -38,8 +39,10 @@ fun VentaScreen(
 ) {
     // --- ESTADOS REACTIVOS ---
     var metrosVendidos by remember(rolloId) { mutableStateOf("") }
-    var vendedor by remember(rolloId) { mutableStateOf("") }
     var cliente by remember(rolloId) { mutableStateOf("") }
+
+    var nombreSugerido = remember (userEmail){ ExtractName(userEmail) }
+    var vendedor by remember(rolloId) { mutableStateOf(nombreSugerido) }
 
     // Estado para saber si confirmamos "CARRITO" o "VENTA DIRECTA"
     var accionPendiente by remember { mutableStateOf<String?>(null) }
@@ -109,6 +112,7 @@ fun VentaScreen(
                         metros = metrosNum,
                         vendedor = vendedor,
                         cliente = cliente
+                        // idsAfectados = rollosAfectados <-- ELIMINADO
                     ) {
                         invVm.cargarRollos()
                         navController.popBackStack()
@@ -160,7 +164,13 @@ fun VentaScreen(
                 keyboardType = KeyboardType.Decimal
             )
 
-            TelasTextField(value = vendedor, onValueChange = { vendedor = it }, label = "Vendedor *")
+            TelasTextField(
+                value = vendedor,
+                onValueChange = { vendedor = it },
+                label = "Vendedor *",
+                enabled = false, // <-- DESHABILITADO // Dejamos que pueda corregirlo si es necesario
+            )
+
             TelasTextField(value = cliente, onValueChange = { cliente = it }, label = "Cliente (Opcional)")
 
             // --- BOTÓN CARRITO ---

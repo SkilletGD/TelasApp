@@ -58,21 +58,25 @@ class SalesViewModel : ViewModel() {
         }
     }
 
-    fun registrarVenta(rolloId: Int, metros: Double, vendedor: String, cliente: String?, onSuccess: () -> Unit) {
+    // Cambia la firma de la función para recibir la lista de IDs
+    // Cambia la función para que NO pida idsAfectados
+    fun registrarVenta(
+        rolloId: Int,
+        metros: Double,
+        vendedor: String,
+        cliente: String?,
+        onSuccess: () -> Unit // Quitamos el parámetro de la lista
+    ) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // LOG DE DEPURACIÓN: Revisa tu Logcat para ver qué ID está llegando aquí
-                println("DEBUG_VENTA: Enviando venta para el ID: $rolloId")
-
                 val venta = Venta(
-                    rollo_id = rolloId, // <--- ASEGÚRATE QUE SEA EL PARÁMETRO
+                    rollo_id = rolloId,
                     metros_vendidos = metros,
                     vendedor = vendedor,
                     cliente = cliente
                 )
 
-                // Llamada a la API
                 ApiService.registrarVenta(venta)
 
                 _eventos.emit("✅ Venta registrada")
